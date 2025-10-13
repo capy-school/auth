@@ -30,10 +30,14 @@ export const auth = betterAuth({
       prompt: "select_account", 
       clientId: getEnv('GOOGLE_CLIENT_ID'),
       clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
+      // Ensure provider redirects back to the correct domain
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/google`,
     },
     github: {
       clientId: getEnv('GITHUB_CLIENT_ID'),
       clientSecret: getEnv('GITHUB_CLIENT_SECRET'),
+      // Ensure provider redirects back to the correct domain
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/github`,
     },
     microsoft: { 
         clientId: getEnv('MICROSOFT_CLIENT_ID'), 
