@@ -14,6 +14,7 @@ const providerStyles: Record<string, string> = {
   facebook: 'bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white',
   apple: 'bg-gradient-to-br from-gray-900 to-black hover:from-black hover:to-gray-900 text-white',
   github: 'bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white',
+  qq: 'bg-gradient-to-br from-cyan-400 to-sky-500 hover:from-sky-500 hover:to-sky-600 text-white',
   microsoft: 'bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white',
   kakao: 'bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900',
   naver: 'bg-gradient-to-br from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white',
