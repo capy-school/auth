@@ -3,15 +3,10 @@ import { auth } from '../../../lib/auth';
 
 // Keep this list in sync with trustedOrigins in src/lib/auth.ts
 const ALLOWED_ORIGINS = new Set([
-  'http://localhost:4321',
-  'http://localhost:5174',
-  'http://localhost:4322',
-  'https://capyschool.dev',
-  'https://app.capyschool.ai',
-  'http://localhost:5175',
-  'http://localhost:4330',
-  'https://cms-ai.dev',
-  'https://cms.ai',
+  "https://auth.capyschool.com",
+  "https://capyschool.com",
+  "https://www.capyschool.com",
+  "https://cms.capyschool.com",
 ]);
 
 export const ALL: APIRoute = async (context) => {

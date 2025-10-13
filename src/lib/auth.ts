@@ -65,16 +65,10 @@ export const auth = betterAuth({
   },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
   trustedOrigins: [
-    "http://localhost:4321",
-    "http://localhost:5174",
-    "http://localhost:4322",
-    "https://capyschool.dev",
-    "https://app.capyschool.ai",
-    "http://localhost:5175",
-    "http://localhost:4330",
-    "https://cms-ai.dev",
-    "https://cms.ai",
-    "https://appleid.apple.com",
+    "https://auth.capyschool.com",
+    "https://capyschool.com",
+    "https://www.capyschool.com",
+    "https://cms.capyschool.com",
   ], 
   secret: getEnv('BETTER_AUTH_SECRET'),
   plugins: [
