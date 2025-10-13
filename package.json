@@ -7,7 +7,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "db:makemigration": "@better-auth/cli generate",
+    "db:generate": "@better-auth/cli generate",
     "db:migrate": "@better-auth/cli migrate",
     "db:seed": "tsx src/db/seed.ts"
   },
