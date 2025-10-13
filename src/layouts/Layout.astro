@@ -1,6 +1,9 @@
 ---
 import "../styles/global.css";
-const { title = "Login Gateway - Secure Authentication" } = Astro.props;
+const {
+  title = "Login Gateway - Secure Authentication",
+  animated = false,
+} = Astro.props as { title?: string; animated?: boolean | 'force' };
 ---
 <!doctype html>
 <html lang="en">
@@ -11,7 +14,15 @@ const { title = "Login Gateway - Secure Authentication" } = Astro.props;
     <title>{title}</title>
     <slot name="head" />
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-gray-100 antialiased">
+  <body class={
+    `min-h-screen text-gray-100 antialiased ${
+      animated === 'force'
+        ? 'animated-gradient--force'
+        : animated
+          ? 'animated-gradient'
+          : 'bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900'
+    }`
+  }>
     <slot />
   </body>
 </html>

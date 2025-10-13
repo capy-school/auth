@@ -2,7 +2,7 @@
 import { LoginGateway } from '../components/LoginGateway';
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout title="Login Gateway - Secure Authentication">
+<Layout title="Login Gateway - Secure Authentication" animated>
   <div class="container mx-auto px-4 py-8">
     <LoginGateway client:load client={(await import('../lib/auth-client')).authClient} />
   </div>
