@@ -3,13 +3,17 @@ import { genericOAuth } from 'better-auth/plugins';
 import { Kysely } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 
+function getEnv(key: string, defaultValue?: string) {
+  return import.meta.env[key] || process.env[key] || defaultValue;
+}
+
 interface Database {
 }
 
 const db = new Kysely<Database>({
     dialect: new LibsqlDialect({
-        url: import.meta.env.TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL || 'file:local.db',
-        authToken: import.meta.env.TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN,
+        url: getEnv('TURSO_DATABASE_URL', 'file:local.db'),
+        authToken: getEnv('TURSO_AUTH_TOKEN'),
     }),
 });
 
@@ -24,44 +28,55 @@ export const auth = betterAuth({
   socialProviders: {
     google: {
       prompt: "select_account", 
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: getEnv('GOOGLE_CLIENT_ID'),
+      clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
     },
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+      clientId: getEnv('GITHUB_CLIENT_ID'),
+      clientSecret: getEnv('GITHUB_CLIENT_SECRET'),
     },
     microsoft: { 
-        clientId: process.env.MICROSOFT_CLIENT_ID as string, 
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string, 
+        clientId: getEnv('MICROSOFT_CLIENT_ID'), 
+        clientSecret: getEnv('MICROSOFT_CLIENT_SECRET'), 
         // Optional
         tenantId: 'common', 
         authority: "https://login.microsoftonline.com", // Authentication authority URL
         prompt: "select_account", // Forces account selection
     }, 
     vk: { 
-      clientId: process.env.VK_CLIENT_ID as string, 
-      clientSecret: process.env.VK_CLIENT_SECRET as string, 
+      clientId: getEnv('VK_CLIENT_ID'), 
+      clientSecret: getEnv('VK_CLIENT_SECRET'), 
     },
     kakao: { 
-      clientId: process.env.KAKAO_CLIENT_ID as string, 
-      clientSecret: process.env.KAKAO_CLIENT_SECRET as string, 
+      clientId: getEnv('KAKAO_CLIENT_ID'), 
+      clientSecret: getEnv('KAKAO_CLIENT_SECRET'), 
     },
     naver: { 
-      clientId: process.env.NAVER_CLIENT_ID as string, 
-      clientSecret: process.env.NAVER_CLIENT_SECRET as string, 
+      clientId: getEnv('NAVER_CLIENT_ID'), 
+      clientSecret: getEnv('NAVER_CLIENT_SECRET'), 
     },
     line: { 
-      clientId: process.env.LINE_CLIENT_ID as string,
-      clientSecret: process.env.LINE_CLIENT_SECRET as string,
+      clientId: getEnv('LINE_CLIENT_ID'),
+      clientSecret: getEnv('LINE_CLIENT_SECRET'),
       // Optional: override redirect if needed
       // redirectURI: "https://your.app/api/auth/callback/line",
       // scopes are prefilled: ["openid","profile","email"]. Append if needed
     },
   },
-  // Add appleid.apple.com to trustedOrigins for Sign In with Apple flows
-  trustedOrigins: ["https://appleid.apple.com"], 
-  secret: process.env.BETTER_AUTH_SECRET || 'your-secret-key-must-be-at-least-32-characters-long-for-security',
+  // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
+  trustedOrigins: [
+    "http://localhost:4321",
+    "http://localhost:5174",
+    "http://localhost:4322",
+    "https://capyschool.dev",
+    "https://app.capyschool.ai",
+    "http://localhost:5175",
+    "http://localhost:4330",
+    "https://cms-ai.dev",
+    "https://cms.ai",
+    "https://appleid.apple.com",
+  ], 
+  secret: getEnv('BETTER_AUTH_SECRET'),
   plugins: [
     genericOAuth({
       config: [
@@ -70,13 +85,13 @@ export const auth = betterAuth({
           authorizationUrl: 'https://graph.qq.com/oauth2.0/authorize',
           tokenUrl: 'https://graph.qq.com/oauth2.0/token',
           // QQ requires openid via a separate endpoint; we'll fetch both
-          clientId: process.env.QQ_CLIENT_ID as string,
-          clientSecret: process.env.QQ_CLIENT_SECRET as string,
+          clientId: getEnv('QQ_CLIENT_ID'),
+          clientSecret: getEnv('QQ_CLIENT_SECRET'),
           scopes: ['get_user_info'],
           // After token exchange, map to Better Auth user
           getUserInfo: async (tokens: any) => {
             const accessToken = tokens.accessToken as string;
-            const appId = process.env.QQ_CLIENT_ID as string;
+            const appId = getEnv('QQ_CLIENT_ID');
             // 1) Get openid
             const meRes = await fetch(`https://graph.qq.com/oauth2.0/me?access_token=${encodeURIComponent(accessToken)}&fmt=json`);
             const meJson = await meRes.json();

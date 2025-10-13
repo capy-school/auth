@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AuthButton } from './AuthButton';
 import { getApp, isRedirectAllowed, type AppConfig } from '../lib/apps';
+import { authClient } from '../lib/auth-client';
 
 // SVG Icons for OAuth providers
 const GoogleIcon = () => (
@@ -71,7 +72,8 @@ const QQIcon = () => (
   </svg>
 );
 
-export function LoginGateway({ client }: { client: any }) {
+export function LoginGateway() {
+  const client = authClient;
   const [email, setEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [authMethod, setAuthMethod] = useState<'magiclink' | 'otp' | 'passkey' | null>(null);
@@ -166,22 +168,17 @@ export function LoginGateway({ client }: { client: any }) {
         localStorage.setItem('app.id', app.id);
         localStorage.setItem('app.redirect', redirectUrl);
       }
-      window.location.href = `/api/auth/signin/${provider}`;
+      // Built-in providers use social; generic uses oauth2
+      const builtin = ['google', 'github', 'microsoft', 'kakao', 'naver', 'line'];
+      if (builtin.includes(provider)) {
+        console.log(1,provider, client, client.signIn, authClient)
+        await client.signIn.social({ provider });
+      } else {
+        console.log(2,provider)
+        await client.signIn.oauth2({ providerId: provider });
+      }
     } catch (error) {
       console.error('OAuth error:', error);
-    }
-  };
-
-  const handleQQLogin = async () => {
-    try {
-      if (errors.length > 0) return;
-      if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
-        localStorage.setItem('app.id', app.id);
-        localStorage.setItem('app.redirect', redirectUrl);
-      }
-      await client.signIn.oauth2({ providerId: 'qq' });
-    } catch (error) {
-      console.error('QQ OAuth error:', error);
     }
   };
 
@@ -317,7 +314,7 @@ export function LoginGateway({ client }: { client: any }) {
             <AuthButton
               provider="qq"
               icon={<QQIcon />}
-              onClick={handleQQLogin}
+              onClick={() => handleOAuthLogin('qq')}
               className={errors.length ? 'opacity-50 pointer-events-none' : undefined}
             >
               QQ

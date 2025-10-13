@@ -15,9 +15,12 @@ export const APPS: Record<AppId, AppConfig> = {
     description: 'Learning platform for students and educators.',
     validBases: [
       'http://localhost:5174',
+      'http://localhost:4321',
       'http://localhost:4322',
-      'https://capyschool.dev',
-      'https://app.capyschool.ai',
+      'https://capyschool.com',
+      'https://www.capyschool.com',
+      'https://auth.capyschool.com',
+      'https://cms.capyschool.com',
     ],
   },
   'cms-ai': {
@@ -25,10 +28,11 @@ export const APPS: Record<AppId, AppConfig> = {
     name: 'CMS-AI',
     description: 'AI-assisted content management system.',
     validBases: [
-      'http://localhost:5175',
-      'http://localhost:4330',
-      'https://cms-ai.dev',
-      'https://cms.ai',
+      'http://localhost:5174',
+      'http://localhost:4321',
+      'http://localhost:4322',
+      'https://auth.capyschool.com',
+      'https://cms.capyschool.com',
     ],
   },
 };
