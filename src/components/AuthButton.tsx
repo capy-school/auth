@@ -13,6 +13,7 @@ const providerStyles: Record<string, string> = {
   google: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white',
   facebook: 'bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white',
   apple: 'bg-gradient-to-br from-gray-900 to-black hover:from-black hover:to-gray-900 text-white',
+  github: 'bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white',
   microsoft: 'bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white',
   kakao: 'bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900',
   naver: 'bg-gradient-to-br from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white',
@@ -22,7 +23,7 @@ const providerStyles: Record<string, string> = {
 };
 
 export function AuthButton({ provider, icon, onClick, className, children }: AuthButtonProps) {
-  const baseStyles = 'w-full px-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5';
+  const baseStyles = 'w-full px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg';
   const providerStyle = providerStyles[provider.toLowerCase()] || 'bg-gray-700 hover:bg-gray-800 text-white';
 
   return (
@@ -30,7 +31,7 @@ export function AuthButton({ provider, icon, onClick, className, children }: Aut
       onClick={onClick}
       className={cn(baseStyles, providerStyle, className)}
     >
-      {icon && <span className="w-6 h-6">{icon}</span>}
+      {icon && <span className="auth-icon w-4 h-4 shrink-0">{icon}</span>}
       {children}
     </button>
   );

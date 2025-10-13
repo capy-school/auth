@@ -13,101 +13,90 @@ if (!session) {
 const user = session.user;
 ---
 
-<Layout>
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-      <meta name="viewport" content="width=device-width" />
-      <title>Dashboard - {user.name || user.email}</title>
-    </head>
-    <body class="bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 min-h-screen">
-      <div class="container mx-auto px-4 py-8">
-        <div class="max-w-4xl mx-auto">
-          <div class="bg-gray-800/50 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-gray-700">
-            <div class="flex items-center justify-between mb-8">
-              <h1 class="text-3xl font-bold text-white">Dashboard</h1>
-              <form action="/api/auth/signout" method="POST">
-                <button class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                  Sign Out
-                </button>
-              </form>
-            </div>
+<Layout title={`Dashboard - ${user.name || user.email}` }>
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <div class="bg-gray-800/50 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-gray-700">
+        <div class="flex items-center justify-between mb-8">
+          <h1 class="text-3xl font-bold text-white">Dashboard</h1>
+          <form action="/api/auth/signout" method="POST">
+            <button class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+              Sign Out
+            </button>
+          </form>
+        </div>
 
-            <div class="space-y-6">
-              <div class="bg-gray-700/50 rounded-xl p-6">
-                <h2 class="text-xl font-semibold text-white mb-4">Profile Information</h2>
-                <div class="space-y-3 text-gray-300">
-                  <div class="flex items-center gap-3">
-                    {user.image && (
-                      <img src={user.image} alt={user.name || 'User'} class="w-16 h-16 rounded-full" />
-                    )}
-                    <div>
-                      <p class="font-semibold text-white text-lg">{user.name || 'Anonymous'}</p>
-                      <p class="text-gray-400">{user.email}</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2 mt-4">
-                    <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">
-                      {user.role || 'user'}
-                    </span>
-                    {user.emailVerified && (
-                      <span class="px-3 py-1 bg-green-600 text-white rounded-full text-sm font-semibold">
-                        ✓ Verified
-                      </span>
-                    )}
-                  </div>
+        <div class="space-y-6">
+          <div class="bg-gray-700/50 rounded-xl p-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Profile Information</h2>
+            <div class="space-y-3 text-gray-300">
+              <div class="flex items-center gap-3">
+                {user.image && (
+                  <img src={user.image} alt={user.name || 'User'} class="w-16 h-16 rounded-full" />
+                )}
+                <div>
+                  <p class="font-semibold text-white text-lg">{user.name || 'Anonymous'}</p>
+                  <p class="text-gray-400">{user.email}</p>
                 </div>
               </div>
-
-              <div class="bg-gray-700/50 rounded-xl p-6">
-                <h2 class="text-xl font-semibold text-white mb-4">Security Settings</h2>
-                <div class="space-y-3">
-                  <a 
-                    href="/settings/passkey" 
-                    class="block px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                  >
-                    Manage Passkeys
-                  </a>
-                  <a 
-                    href="/settings/2fa" 
-                    class="block px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                  >
-                    Two-Factor Authentication
-                  </a>
-                  <a 
-                    href="/settings/api-keys" 
-                    class="block px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                  >
-                    API Keys
-                  </a>
-                </div>
+              <div class="flex items-center gap-2 mt-4">
+                <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">
+                  {user.role || 'user'}
+                </span>
+                {user.emailVerified && (
+                  <span class="px-3 py-1 bg-green-600 text-white rounded-full text-sm font-semibold">
+                    ✓ Verified
+                  </span>
+                )}
               </div>
-
-              {user.role === 'admin' && (
-                <div class="bg-gray-700/50 rounded-xl p-6">
-                  <h2 class="text-xl font-semibold text-white mb-4">Admin Actions</h2>
-                  <div class="space-y-3">
-                    <a 
-                      href="/admin" 
-                      class="block px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    >
-                      Admin Dashboard
-                    </a>
-                    <a 
-                      href="/api/auth/reference" 
-                      class="block px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
-                    >
-                      API Documentation
-                    </a>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
+
+          <div class="bg-gray-700/50 rounded-xl p-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Security Settings</h2>
+            <div class="space-y-3">
+              <a 
+                href="/settings/passkey" 
+                class="block px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                Manage Passkeys
+              </a>
+              <a 
+                href="/settings/2fa" 
+                class="block px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                Two-Factor Authentication
+              </a>
+              <a 
+                href="/settings/api-keys" 
+                class="block px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                API Keys
+              </a>
+            </div>
+          </div>
+
+          {user.role === 'admin' && (
+            <div class="bg-gray-700/50 rounded-xl p-6">
+              <h2 class="text-xl font-semibold text-white mb-4">Admin Actions</h2>
+              <div class="space-y-3">
+                <a 
+                  href="/admin" 
+                  class="block px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Admin Dashboard
+                </a>
+                <a 
+                  href="/api/auth/reference" 
+                  class="block px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                >
+                  API Documentation
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </body>
-  </html>
+    </div>
+  </div>
 </Layout>
