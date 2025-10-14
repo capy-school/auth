@@ -1,7 +1,8 @@
 import { betterAuth } from 'better-auth';
-import { genericOAuth } from 'better-auth/plugins';
+import { apiKey, genericOAuth, magicLink, twoFactor } from 'better-auth/plugins';
 import { Kysely } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
+import { passkey } from 'better-auth/plugins/passkey';
 
 function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
@@ -108,5 +109,19 @@ export const auth = betterAuth({
         },
       ],
     }),
+    twoFactor(),
+    //   phoneNumber({  
+    //     sendOTP: ({ phoneNumber, code }, request) => { 
+    //         // Implement sending OTP code via SMS
+    //     } 
+    // }),
+    magicLink({
+      sendMagicLink: async ({ email, token, url }, request) => {
+          // send email to user
+      }
+    }),
+    passkey(),
+    apiKey(),
+    // organization(),
   ],
 });
