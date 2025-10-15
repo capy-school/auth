@@ -15,6 +15,10 @@ export default defineConfig({
   integrations: [react()],
   output: 'server',
 
+  image: {
+    remotePatterns: [],
+  },
+
   vite: {
     plugins: vitePlugins,
   },
