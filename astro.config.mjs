@@ -6,8 +6,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 import vercel from '@astrojs/vercel';
 
-// Resolve site for Astro config (fixes validation issues in some builds)
-const SITE = process.env.AUTH_BASE_URL || process.env.BETTER_AUTH_URL || 'http://localhost:4321';
+// Resolve site for Astro config (prefer Vercel URL in CI)
+const SITE = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : process.env.AUTH_BASE_URL || process.env.BETTER_AUTH_URL || 'http://localhost:4321';
 
 // https://astro.build/config
 export default defineConfig({
@@ -16,7 +18,7 @@ export default defineConfig({
   site: SITE,
 
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss()].filter(Boolean),
   },
 
   adapter: vercel(),

@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 function getEnv(key: string, defaultValue?: string) {
   return (import.meta as any).env?.[key] || process.env[key] || defaultValue;
 }
@@ -12,41 +10,44 @@ export type SendEmailParams = {
   fromOverride?: string;
 };
 
-let cachedTransport: nodemailer.Transporter | null = null;
-
-function getTransport() {
-  if (cachedTransport) return cachedTransport;
-
-  const host = getEnv('SMTP_HOST', 'smtp.forwardemail.net');
-  const port = Number(getEnv('SMTP_PORT', '587'));
-  const secure = getEnv('SMTP_SECURE', port === 465 ? 'true' : 'false') === 'true';
-  const user = getEnv('SMTP_USER');
-  const pass = getEnv('SMTP_PASS');
-
-  if (!host || !port || !user || !pass) {
-    throw new Error('SMTP configuration missing. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
-    }
-
-  cachedTransport = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
-
-  return cachedTransport;
-}
-
+/**
+ * Send email via Forward Email API
+ * Uses FORWARDEMAIL_KEY for authentication
+ * Docs: https://forwardemail.net/en/email-api
+ */
 export async function sendEmail({ to, subject, html, text, fromOverride }: SendEmailParams) {
-  const transporter = getTransport();
+  const apiKey = getEnv('FORWARDEMAIL_KEY');
+  if (!apiKey) {
+    throw new Error('FORWARDEMAIL_KEY is required. Get one at https://forwardemail.net/en/my-account/security');
+  }
 
-  const from = fromOverride || getEnv('SMTP_FROM', `Capy School Auth <no-reply@capyschool.com>`);
+  const from = fromOverride || getEnv('SMTP_FROM') || getEnv('EMAIL_FROM') || 'noreply@capyschool.com';
 
-  await transporter.sendMail({
+  // Forward Email API uses Nodemailer-compatible format
+  const payload = {
     from,
     to,
     subject,
     text: text || html.replace(/<[^>]+>/g, ''),
     html,
+  };
+
+  // Basic Auth: API_KEY as username, empty password
+  const auth = Buffer.from(`${apiKey}:`).toString('base64');
+
+  const response = await fetch('https://api.forwardemail.net/v1/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    throw new Error(`Forward Email API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  return response.json();
 }
