@@ -68,6 +68,12 @@ export const auth = betterAuth({
       // scopes are prefilled: ["openid","profile","email"]. Append if needed
     },
   },
+  advanced: {
+    crossSubDomainCookies: {
+        enabled: true,
+        domain: "capyschool.com", // your domain
+    },
+  },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
   trustedOrigins: [
     "https://auth.capyschool.com",
