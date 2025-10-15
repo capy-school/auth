@@ -1,8 +1,9 @@
 import { betterAuth } from 'better-auth';
-import { apiKey, genericOAuth, magicLink, twoFactor } from 'better-auth/plugins';
+import { apiKey, magicLink, oAuthProxy, twoFactor } from 'better-auth/plugins';
 import { Kysely } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 import { passkey } from 'better-auth/plugins/passkey';
+import { sendEmail } from './email';
 
 function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
@@ -48,10 +49,6 @@ export const auth = betterAuth({
         authority: "https://login.microsoftonline.com", // Authentication authority URL
         prompt: "select_account", // Forces account selection
     }, 
-    vk: { 
-      clientId: getEnv('VK_CLIENT_ID'), 
-      clientSecret: getEnv('VK_CLIENT_SECRET'), 
-    },
     kakao: { 
       clientId: getEnv('KAKAO_CLIENT_ID'), 
       clientSecret: getEnv('KAKAO_CLIENT_SECRET'), 
@@ -80,41 +77,11 @@ export const auth = betterAuth({
     "https://capyschool.com",
     "https://www.capyschool.com",
     "https://cms.capyschool.com",
+    // local dev
+    "http://localhost:4321",
   ], 
   secret: getEnv('BETTER_AUTH_SECRET'),
   plugins: [
-    genericOAuth({
-      config: [
-        {
-          providerId: 'qq',
-          authorizationUrl: 'https://graph.qq.com/oauth2.0/authorize',
-          tokenUrl: 'https://graph.qq.com/oauth2.0/token',
-          // QQ requires openid via a separate endpoint; we'll fetch both
-          clientId: getEnv('QQ_CLIENT_ID'),
-          clientSecret: getEnv('QQ_CLIENT_SECRET'),
-          scopes: ['get_user_info'],
-          // After token exchange, map to Better Auth user
-          getUserInfo: async (tokens: any) => {
-            const accessToken = tokens.accessToken as string;
-            const appId = getEnv('QQ_CLIENT_ID');
-            // 1) Get openid
-            const meRes = await fetch(`https://graph.qq.com/oauth2.0/me?access_token=${encodeURIComponent(accessToken)}&fmt=json`);
-            const meJson = await meRes.json();
-            const openid = meJson.openid as string;
-            if (!openid) return null;
-            // 2) Get profile
-            const infoUrl = `https://graph.qq.com/user/get_user_info?access_token=${encodeURIComponent(accessToken)}&oauth_consumer_key=${encodeURIComponent(appId)}&openid=${encodeURIComponent(openid)}&fmt=json`;
-            const infoRes = await fetch(infoUrl);
-            const info = await infoRes.json();
-            const name = info.nickname || 'QQ User';
-            const image = info.figureurl_qq_2 || info.figureurl_qq_1 || undefined;
-            // QQ may not provide email. Use stable alias to satisfy schema.
-            const email = `${openid}@qq.local`;
-            return { id: openid, name, email, image } as any;
-          },
-        },
-      ],
-    }),
     twoFactor(),
     //   phoneNumber({  
     //     sendOTP: ({ phoneNumber, code }, request) => { 
@@ -123,11 +90,41 @@ export const auth = betterAuth({
     // }),
     magicLink({
       sendMagicLink: async ({ email, token, url }, request) => {
-          // send email to user
+          const appBase = getEnv('AUTH_BASE_URL', 'http://localhost:4321').replace(/\/+$/,'');
+          const signInUrl = url || `${appBase}/api/auth/magic-link?token=${encodeURIComponent(token)}`;
+          const callbackURL = `${appBase}/`;
+          const html = `
+            <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.5; color:#0f172a">
+              <h2>Sign in to Capy School</h2>
+              <p>Click the button below to securely sign in.</p>
+              <p style="margin:24px 0">
+                <a href="${signInUrl}" style="background:#4f46e5; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none; display:inline-block">Sign in</a>
+              </p>
+              <p>Or copy and paste this URL into your browser:</p>
+              <code style="word-break:break-all">${signInUrl}</code>
+              <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0"/>
+              <p>If you did not request this, you can ignore this email.</p>
+            </div>
+          `;
+          await sendEmail({
+            to: email,
+            subject: 'Your secure sign-in link',
+            html,
+          });
       }
     }),
-    passkey(),
+    passkey({
+      rpID: getEnv('PASSKEY_RP_ID', (() => {
+        try { return new URL(getEnv('AUTH_BASE_URL', 'http://localhost:4321')).hostname; } catch { return 'localhost'; }
+      })()),
+      rpName: getEnv('PASSKEY_RP_NAME', 'CapySchool'),
+      origin: getEnv('AUTH_BASE_URL', 'http://localhost:4321').replace(/\/+$/,''),
+    }),
     apiKey(),
     // organization(),
+    oAuthProxy({ 
+      productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly
+      currentURL: "http://localhost:4321", // Optional - if the URL isn't inferred correctly
+  }), 
   ],
 });

@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { auth } from '../../../lib/auth';
 
+const NODE_ENV = import.meta.env.NODE_ENV || process.env.NODE_ENV;
+
 // Keep this list in sync with trustedOrigins in src/lib/auth.ts
 const ALLOWED_ORIGINS = new Set([
   "https://auth.capyschool.com",
@@ -8,6 +10,10 @@ const ALLOWED_ORIGINS = new Set([
   "https://www.capyschool.com",
   "https://cms.capyschool.com",
 ]);
+
+if (NODE_ENV === 'development') {
+  ALLOWED_ORIGINS.add('http://localhost:4321');
+}
 
 export const ALL: APIRoute = async (context) => {
   const req = context.request;

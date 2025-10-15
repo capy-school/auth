@@ -5,6 +5,14 @@ interface ImportMetaEnv {
   readonly TURSO_AUTH_TOKEN: string;
   readonly BETTER_AUTH_SECRET: string;
   readonly BETTER_AUTH_URL: string;
+  readonly AUTH_BASE_URL?: string;
+  readonly SMTP_HOST?: string;
+  readonly SMTP_PORT?: string;
+  readonly SMTP_USER?: string;
+  readonly SMTP_PASS?: string;
+  readonly SMTP_FROM?: string;
+  readonly PASSKEY_RP_ID?: string;
+  readonly PASSKEY_RP_NAME?: string;
   readonly GOOGLE_CLIENT_ID?: string;
   readonly GOOGLE_CLIENT_SECRET?: string;
   readonly FACEBOOK_CLIENT_ID?: string;

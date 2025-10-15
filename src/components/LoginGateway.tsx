@@ -66,12 +66,6 @@ const LineIcon = () => (
   </svg>
 );
 
-const QQIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-full h-full" fill="currentColor" aria-hidden>
-    <path d="M12 2c4.6 0 7 3.2 7 7.2 0 1.6-.5 3.1-1.4 4.4.3 1 .5 2 .5 3 0 .6-.4 1.1-1 1.1-.6 0-1-.5-1-1.1 0-.5-.1-1-.3-1.5-1.1.9-2.6 1.4-3.8 1.4s-2.7-.5-3.8-1.4c-.2.5-.3 1-.3 1.5 0 .6-.4 1.1-1 1.1s-1-.5-1-1.1c0-1 .2-2 .5-3-.9-1.3-1.4-2.8-1.4-4.4C5 5.2 7.4 2 12 2zm-3 15.5c.9.5 1.9.8 3 .8s2.1-.3 3-.8c-.7 1.3-1.9 2.5-3 3.4-1.1-.9-2.3-2.1-3-3.4z"/>
-  </svg>
-);
-
 export function LoginGateway() {
   const client = authClient;
   const [email, setEmail] = useState('');
@@ -184,9 +178,26 @@ export function LoginGateway() {
 
   const handlePasskeyLogin = async () => {
     try {
-      // Passkey authentication placeholder
-      console.log('Passkey login - Configure passkey plugin in Better Auth');
-      alert('Passkey authentication - Configure in Better Auth');
+      if (errors.length > 0) return;
+      if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
+        localStorage.setItem('app.id', app.id);
+        localStorage.setItem('app.redirect', redirectUrl);
+      }
+      const target = redirectUrl && app && isRedirectAllowed(app, redirectUrl)
+        ? redirectUrl
+        : '/dashboard';
+
+      await client.signIn.passkey({
+        autoFill: true,
+        fetchOptions: {
+          onSuccess() {
+            window.location.href = target;
+          },
+          onError(ctx) {
+            console.error('Passkey sign-in failed:', ctx.error);
+          },
+        },
+      });
     } catch (error) {
       console.error('Passkey error:', error);
     }
@@ -195,9 +206,26 @@ export function LoginGateway() {
   const handleMagicLink = async () => {
     if (!email) return;
     try {
-      // Magic link placeholder
-      console.log('Magic link for:', email);
-      alert('Magic link feature - Configure email service and Better Auth plugin');
+      if (errors.length > 0) return;
+      if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
+        localStorage.setItem('app.id', app.id);
+        localStorage.setItem('app.redirect', redirectUrl);
+      }
+      const target = redirectUrl && app && isRedirectAllowed(app, redirectUrl)
+        ? redirectUrl
+        : '/dashboard';
+
+      const { error } = await client.signIn.magicLink({
+        email,
+        callbackURL: target,
+        newUserCallbackURL: target,
+        errorCallbackURL: target,
+      });
+      if (!error) {
+        alert('Magic link sent. Check your email.');
+      } else {
+        console.error('Magic link error:', error);
+      }
     } catch (error) {
       console.error('Magic link error:', error);
     }
@@ -309,15 +337,6 @@ export function LoginGateway() {
               className={errors.length ? 'opacity-50 pointer-events-none' : undefined}
             >
               Google
-            </AuthButton>
-
-            <AuthButton
-              provider="qq"
-              icon={<QQIcon />}
-              onClick={() => handleOAuthLogin('qq')}
-              className={errors.length ? 'opacity-50 pointer-events-none' : undefined}
-            >
-              QQ
             </AuthButton>
 
             <AuthButton
