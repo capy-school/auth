@@ -23,5 +23,9 @@ export default defineConfig({
     plugins: vitePlugins,
   },
 
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: false,
+    },
+  }),
 });
