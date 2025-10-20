@@ -33,7 +33,11 @@ export async function sendEmail({ to, subject, html, text, fromOverride }: SendE
   };
 
   // Basic Auth: API_KEY as username, empty password
-  const auth = Buffer.from(`${apiKey}:`).toString('base64');
+  const auth = (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function')
+    ? Buffer.from(`${apiKey}:`).toString('base64')
+    : (typeof (globalThis as any).btoa === 'function'
+      ? (globalThis as any).btoa(`${apiKey}:`)
+      : (() => { throw new Error('Base64 encoder not available'); })());
 
   const response = await fetch('https://api.forwardemail.net/v1/emails', {
     method: 'POST',
