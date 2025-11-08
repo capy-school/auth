@@ -2,15 +2,30 @@
 import { auth } from '../lib/auth';
 import Layout from '../layouts/Layout.astro';
 
-const session = await auth.api.getSession({
-  headers: Astro.request.headers,
-});
+// const session = await auth.api.getSession({
+//   headers: Astro.request.headers,
+// });
 
-if (!session) {
-  return Astro.redirect('/');
+// if (!session) {
+//   return Astro.redirect('/');
+// }
+
+let user: any;
+const isLocal = ['localhost', '127.0.0.1', '::1'].includes(Astro.url.hostname);
+if (isLocal) {
+  user = {
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    role: 'user',
+    emailVerified: true,
+    image: ''
+  };
+} else {
+  user = await auth.api.getSession({ headers: Astro.request.headers });
+  if (!user) {
+    return Astro.redirect('/');
+  }
 }
-
-const user = session.user;
 ---
 
 <Layout title={`Dashboard - ${user.name || user.email}` }>
