@@ -11,11 +11,12 @@ function getEnv(key: string, defaultValue?: string) {
 
 interface Database {
 }
-
+console.log(import.meta.env.TURSO_DATABASE_URL)
+console.log(import.meta.env.TURSO_AUTH_TOKEN)
 const db = new Kysely<Database>({
     dialect: new LibsqlDialect({
-        url: getEnv('TURSO_DATABASE_URL', 'file:local.db'),
-        authToken: getEnv('TURSO_AUTH_TOKEN'),
+        url: import.meta.env.TURSO_DATABASE_URL || process.env.TURSO_DATABASE_URL || '',
+        authToken: import.meta.env.TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || '',
     }),
 });
 
