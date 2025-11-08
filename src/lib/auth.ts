@@ -48,18 +48,22 @@ export const auth = betterAuth({
         tenantId: 'common', 
         authority: "https://login.microsoftonline.com", // Authentication authority URL
         prompt: "select_account", // Forces account selection
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/microsoft`,
     }, 
     kakao: { 
       clientId: getEnv('KAKAO_CLIENT_ID'), 
       clientSecret: getEnv('KAKAO_CLIENT_SECRET'), 
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/kakao`,
     },
     naver: { 
       clientId: getEnv('NAVER_CLIENT_ID'), 
       clientSecret: getEnv('NAVER_CLIENT_SECRET'), 
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/naver`,
     },
     line: { 
       clientId: getEnv('LINE_CLIENT_ID'),
       clientSecret: getEnv('LINE_CLIENT_SECRET'),
+      redirectURI: `${getEnv('AUTH_BASE_URL', 'http://localhost:4321')}/api/auth/callback/line`,
       // Optional: override redirect if needed
       // redirectURI: "https://your.app/api/auth/callback/line",
       // scopes are prefilled: ["openid","profile","email"]. Append if needed
