@@ -88,34 +88,40 @@ export function LoginGateway() {
       setRedirectUrl(redirect);
 
       const errs: string[] = [];
-      // missing values
-      if (!appId) errs.push('Missing parameter: app');
-      if (!redirect) errs.push('Missing parameter: redirect');
+      
+      // Only validate if at least one parameter is provided
+      const hasParams = appId || redirect;
+      
+      if (hasParams) {
+        // If any param is provided, both should be provided
+        if (!appId) errs.push('Missing parameter: app');
+        if (!redirect) errs.push('Missing parameter: redirect');
 
-      // validate app id if provided
-      if (appId && !resolvedApp) {
-        errs.push(`App not registered: ${appId}`);
-      }
-
-      // validate redirect URL format
-      if (redirect) {
-        try {
-          // eslint-disable-next-line no-new
-          new URL(redirect);
-        } catch {
-          errs.push(`Invalid redirect URL format: ${redirect}`);
+        // validate app id if provided
+        if (appId && !resolvedApp) {
+          errs.push(`App not registered: ${appId}`);
         }
-      }
 
-      // validate origin
-      if (resolvedApp && redirect) {
-        const ok = isRedirectAllowed(resolvedApp, redirect);
-        if (!ok) {
+        // validate redirect URL format
+        if (redirect) {
           try {
-            const o = new URL(redirect).origin;
-            errs.push(`App not registered for the provided redirect origin: ${o}. Allowed bases: ${resolvedApp.validBases.join(', ')}`);
+            // eslint-disable-next-line no-new
+            new URL(redirect);
           } catch {
-            errs.push(`App not registered for the provided redirect.`);
+            errs.push(`Invalid redirect URL format: ${redirect}`);
+          }
+        }
+
+        // validate origin
+        if (resolvedApp && redirect) {
+          const ok = isRedirectAllowed(resolvedApp, redirect);
+          if (!ok) {
+            try {
+              const o = new URL(redirect).origin;
+              errs.push(`App not registered for the provided redirect origin: ${o}. Allowed bases: ${resolvedApp.validBases.join(', ')}`);
+            } catch {
+              errs.push(`App not registered for the provided redirect.`);
+            }
           }
         }
       }
@@ -147,6 +153,11 @@ export function LoginGateway() {
               window.location.href = savedRedirect;
               return;
             }
+            // If no callback URL, redirect to dashboard
+            if (!savedRedirect || !appCfg) {
+              window.location.href = '/dashboard';
+              return;
+            }
           }
         }
       } catch {
@@ -165,10 +176,8 @@ export function LoginGateway() {
       // Built-in providers use social; generic uses oauth2
       const builtin = ['google', 'github', 'microsoft', 'kakao', 'naver', 'line'];
       if (builtin.includes(provider)) {
-        console.log(1,provider, client, client.signIn, authClient)
         await client.signIn.social({ provider });
       } else {
-        console.log(2,provider)
         await client.signIn.oauth2({ providerId: provider });
       }
     } catch (error) {
