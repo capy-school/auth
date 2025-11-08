@@ -91,6 +91,56 @@ if (isLocal) {
             </div>
           </div>
 
+          <div class="bg-gradient-to-br from-gray-700/60 to-gray-700/40 rounded-xl p-6 border border-gray-600/50 shadow-lg">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-xl font-semibold text-white mb-1">Secure Notes</h2>
+                <p class="text-gray-400 text-sm">Store sensitive information locally in your browser</p>
+              </div>
+              <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 rounded-full border border-gray-600/50">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <span class="text-xs font-medium text-gray-300">Encrypted</span>
+              </div>
+            </div>
+            
+            <form id="notesForm" class="mb-6">
+              <div class="flex flex-col md:flex-row gap-3">
+                <input 
+                  id="noteTitle" 
+                  type="text"
+                  placeholder="Note title" 
+                  required
+                  class="flex-1 px-4 py-2.5 bg-gray-800/80 border border-gray-600/70 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <input 
+                  id="noteSecret" 
+                  type="text"
+                  placeholder="Secret content" 
+                  required
+                  class="flex-1 md:flex-[2] px-4 py-2.5 bg-gray-800/80 border border-gray-600/70 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <button 
+                  type="submit" 
+                  class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  <span>Add Note</span>
+                </button>
+              </div>
+            </form>
+
+            <div id="notesEmpty" class="text-center py-8 text-gray-400">
+              <div class="text-5xl mb-3 opacity-50">📝</div>
+              <p class="text-sm">No notes yet. Add your first secure note above.</p>
+            </div>
+
+            <div id="notesList" class="space-y-2"></div>
+          </div>
+
           {user.role === 'admin' && (
             <div class="bg-gray-700/50 rounded-xl p-6">
               <h2 class="text-xl font-semibold text-white mb-4">Admin Actions</h2>
@@ -115,3 +165,127 @@ if (isLocal) {
     </div>
   </div>
 </Layout>
+
+<script>
+  const STORAGE_KEY = 'secure_notes_data';
+  
+  const loadNotes = () => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const saveNotes = (notes) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+  };
+
+  const redactSecret = (secret) => {
+    if (!secret) return '';
+    const len = secret.length;
+    if (len <= 6) return '•'.repeat(len);
+    if (len <= 12) return secret[0] + '•'.repeat(len - 2) + secret[len - 1];
+    return secret.slice(0, 3) + '•'.repeat(8) + secret.slice(-3);
+  };
+
+  const renderNotes = () => {
+    const notes = loadNotes();
+    const emptyEl = document.getElementById('notesEmpty');
+    const listEl = document.getElementById('notesList');
+    
+    if (!emptyEl || !listEl) return;
+    
+    if (notes.length === 0) {
+      emptyEl.style.display = 'block';
+      listEl.style.display = 'none';
+      return;
+    }
+    
+    emptyEl.style.display = 'none';
+    listEl.style.display = 'block';
+    
+    listEl.innerHTML = notes.map(note => `
+      <div class="group bg-gray-800/60 hover:bg-gray-800/80 border border-gray-600/50 rounded-lg p-4 transition-all hover:shadow-md" data-note-id="${note.id}">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-white mb-2 flex items-center gap-2">
+              <span class="text-blue-400">💬</span>
+              <span class="truncate">${note.title}</span>
+            </h3>
+            <div class="flex items-center gap-2">
+              <code class="text-sm font-mono text-gray-300 bg-gray-900/50 px-3 py-1 rounded border border-gray-700/50">${redactSecret(note.secret)}</code>
+              <button 
+                class="reveal-btn opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-400 hover:text-blue-300 px-2 py-1 hover:bg-gray-700/50 rounded"
+                data-secret="${note.secret}"
+              >
+                👁️ Reveal
+              </button>
+            </div>
+          </div>
+          <button 
+            class="delete-btn flex-shrink-0 p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+            title="Delete note"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  document.addEventListener('click', (e) => {
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+      const noteEl = deleteBtn.closest('[data-note-id]');
+      if (noteEl && confirm('Delete this note?')) {
+        const noteId = noteEl.getAttribute('data-note-id');
+        const notes = loadNotes().filter(n => n.id !== noteId);
+        saveNotes(notes);
+        renderNotes();
+      }
+      return;
+    }
+
+    const revealBtn = e.target.closest('.reveal-btn');
+    if (revealBtn) {
+      const secret = revealBtn.getAttribute('data-secret');
+      const codeEl = revealBtn.previousElementSibling;
+      if (codeEl && codeEl.tagName === 'CODE') {
+        const isRevealed = codeEl.textContent === secret;
+        codeEl.textContent = isRevealed ? redactSecret(secret) : secret;
+        revealBtn.textContent = isRevealed ? '👁️ Reveal' : '🙈 Hide';
+      }
+    }
+  });
+
+  const formEl = document.getElementById('notesForm');
+  formEl?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const titleInput = document.getElementById('noteTitle');
+    const secretInput = document.getElementById('noteSecret');
+    
+    if (!titleInput || !secretInput) return;
+    
+    const title = titleInput.value.trim();
+    const secret = secretInput.value.trim();
+    
+    if (!title || !secret) return;
+    
+    const notes = loadNotes();
+    notes.unshift({
+      id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      secret,
+      createdAt: new Date().toISOString()
+    });
+    
+    saveNotes(notes);
+    titleInput.value = '';
+    secretInput.value = '';
+    renderNotes();
+  });
+
+  renderNotes();
+</script>

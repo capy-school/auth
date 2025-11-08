@@ -1,0 +1,294 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { auth } from '../../lib/auth';
+
+let session: any;
+const isLocal = ['localhost', '127.0.0.1', '::1'].includes(Astro.url.hostname);
+if (isLocal) {
+  session = {
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    role: 'user',
+    emailVerified: true,
+    image: ''
+  };
+} else {
+  session = await auth.api.getSession({ headers: Astro.request.headers });
+  if (!session) {
+    return Astro.redirect('/');
+  }
+}
+---
+
+<Layout title="API Keys - Security Settings">
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-6">
+        <a href="/dashboard" class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Back to Dashboard
+        </a>
+      </div>
+
+      <div class="bg-gray-800/50 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-gray-700">
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-white mb-2">API Keys</h1>
+          <p class="text-gray-400">Manage your application API keys for programmatic access</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border border-yellow-700/50 rounded-lg p-4 mb-6">
+          <div class="flex gap-3">
+            <svg class="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <div>
+              <h3 class="text-yellow-300 font-semibold mb-1">Security Notice</h3>
+              <p class="text-yellow-200/80 text-sm">API keys provide full access to your account. Keep them secure and never share them publicly.</p>
+            </div>
+          </div>
+        </div>
+
+        <form id="apiKeyForm" class="mb-6">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input 
+              id="keyName" 
+              type="text"
+              placeholder="Key name (e.g., Production API)" 
+              required
+              class="flex-1 px-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+            <button 
+              type="submit" 
+              class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              <span>Generate Key</span>
+            </button>
+          </div>
+        </form>
+
+        <div id="apiKeysLoading" class="text-center py-12 text-gray-400">
+          <div class="animate-pulse">
+            <div class="text-4xl mb-3">⏳</div>
+            <p class="text-sm">Loading API keys...</p>
+          </div>
+        </div>
+
+        <div id="apiKeysEmpty" class="hidden text-center py-12 text-gray-400 border border-gray-700 rounded-lg">
+          <div class="text-6xl mb-3">🔑</div>
+          <p class="text-sm font-medium mb-1">No API Keys</p>
+          <p class="text-xs text-gray-500">Generate your first API key to get started</p>
+        </div>
+
+        <div id="apiKeysList" class="space-y-3"></div>
+
+        <div id="newKeyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl max-w-2xl w-full p-6">
+            <div class="flex items-start gap-3 mb-4">
+              <div class="p-2 bg-green-500/20 rounded-lg">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-xl font-semibold text-white mb-1">API Key Generated</h3>
+                <p class="text-gray-400 text-sm">Save this key securely. You won't be able to see it again.</p>
+              </div>
+            </div>
+            
+            <div class="bg-gray-900/50 border border-gray-700 rounded-lg p-4 mb-4">
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <span class="text-xs font-medium text-gray-400 uppercase">API Key</span>
+                <button id="copyKeyBtn" class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+                  Copy
+                </button>
+              </div>
+              <code id="newKeyValue" class="block text-sm font-mono text-green-400 break-all"></code>
+            </div>
+
+            <button id="closeModalBtn" class="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+              I've saved my key
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { authClient } from '../../lib/auth-client';
+  
+  let apiKeys = [];
+
+  const redactKey = (key) => {
+    if (!key) return '';
+    const parts = key.split('-');
+    if (parts.length !== 4) return key.slice(0, 8) + '•••••••••••••••••';
+    return `${parts[0]}-••••-••••-${parts[3]}`;
+  };
+
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const loadKeys = async () => {
+    const loadingEl = document.getElementById('apiKeysLoading');
+    try {
+      const { data, error } = await authClient.apiKey.list();
+      if (error) {
+        console.error('Failed to load API keys:', error);
+        if (loadingEl) loadingEl.style.display = 'none';
+        return;
+      }
+      apiKeys = data || [];
+      renderKeys();
+    } catch (err) {
+      console.error('Error loading API keys:', err);
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+  };
+
+  const renderKeys = () => {
+    const loadingEl = document.getElementById('apiKeysLoading');
+    const emptyEl = document.getElementById('apiKeysEmpty');
+    const listEl = document.getElementById('apiKeysList');
+    
+    if (!emptyEl || !listEl || !loadingEl) return;
+    
+    loadingEl.style.display = 'none';
+    
+    if (apiKeys.length === 0) {
+      emptyEl.style.display = 'block';
+      listEl.style.display = 'none';
+      return;
+    }
+    
+    emptyEl.style.display = 'none';
+    listEl.style.display = 'block';
+    
+    listEl.innerHTML = apiKeys.map(key => `
+      <div class="group bg-gray-700/40 hover:bg-gray-700/60 border border-gray-600/50 rounded-lg p-4 transition-all" data-key-id="${key.id}">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="text-xl">🔑</div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-white truncate">${key.name || 'Unnamed Key'}</h3>
+                <p class="text-xs text-gray-400">Created ${formatDate(key.createdAt)}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <code class="text-sm font-mono text-gray-300 bg-gray-900/50 px-3 py-1.5 rounded border border-gray-700/50">••••••••••••••••</code>
+              <span class="px-2 py-1 ${key.expiresAt && new Date(key.expiresAt) < new Date() ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'} text-xs rounded border">${key.expiresAt && new Date(key.expiresAt) < new Date() ? 'Expired' : 'Active'}</span>
+            </div>
+          </div>
+          <button 
+            class="delete-btn shrink-0 p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+            title="Revoke key"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  const showModal = (keyValue) => {
+    const modal = document.getElementById('newKeyModal');
+    const keyValueEl = document.getElementById('newKeyValue');
+    if (modal && keyValueEl) {
+      keyValueEl.textContent = keyValue;
+      modal.classList.remove('hidden');
+    }
+  };
+
+  const hideModal = () => {
+    const modal = document.getElementById('newKeyModal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  };
+
+  document.addEventListener('click', async (e) => {
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+      const keyEl = deleteBtn.closest('[data-key-id]');
+      if (keyEl && confirm('Revoke this API key? This action cannot be undone.')) {
+        const keyId = keyEl.getAttribute('data-key-id');
+        try {
+          const { error } = await authClient.apiKey.delete({ keyId });
+          if (error) {
+            alert('Failed to delete API key: ' + error.message);
+            return;
+          }
+          await loadKeys();
+        } catch (err) {
+          console.error('Error deleting key:', err);
+          alert('Failed to delete API key');
+        }
+      }
+      return;
+    }
+
+    if (e.target.id === 'copyKeyBtn') {
+      const keyValueEl = document.getElementById('newKeyValue');
+      if (keyValueEl) {
+        navigator.clipboard.writeText(keyValueEl.textContent);
+        e.target.textContent = 'Copied!';
+        setTimeout(() => {
+          e.target.textContent = 'Copy';
+        }, 2000);
+      }
+    }
+
+    if (e.target.id === 'closeModalBtn') {
+      hideModal();
+    }
+  });
+
+  const formEl = document.getElementById('apiKeyForm');
+  formEl?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const nameInput = document.getElementById('keyName');
+    if (!nameInput) return;
+    
+    const name = nameInput.value.trim();
+    if (!name) return;
+    
+    try {
+      const { data, error } = await authClient.apiKey.create({
+        name,
+        expiresIn: 60 * 60 * 24 * 365, // 1 year
+      });
+      
+      if (error) {
+        alert('Failed to create API key: ' + error.message);
+        return;
+      }
+      
+      if (data?.key) {
+        nameInput.value = '';
+        await loadKeys();
+        showModal(data.key);
+      }
+    } catch (err) {
+      console.error('Error creating key:', err);
+      alert('Failed to create API key');
+    }
+  });
+
+  loadKeys();
+</script>
