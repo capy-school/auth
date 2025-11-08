@@ -196,19 +196,25 @@ export function LoginGateway() {
         ? redirectUrl
         : '/dashboard';
 
-      await client.signIn.passkey({
-        autoFill: true,
+      const result = await client.signIn.passkey({
         fetchOptions: {
           onSuccess() {
             window.location.href = target;
           },
           onError(ctx) {
             console.error('Passkey sign-in failed:', ctx.error);
+            alert('Passkey sign-in failed: ' + (ctx.error?.message || 'Unknown error'));
           },
         },
       });
-    } catch (error) {
+
+      // If successful and no redirect happened, manually redirect
+      if (result?.data) {
+        window.location.href = target;
+      }
+    } catch (error: any) {
       console.error('Passkey error:', error);
+      alert('Passkey error: ' + (error?.message || 'Unknown error'));
     }
   };
 

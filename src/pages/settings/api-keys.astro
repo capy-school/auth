@@ -123,16 +123,16 @@ if (isLocal) {
 <script>
   import { authClient } from '../../lib/auth-client';
   
-  let apiKeys = [];
+  let apiKeys: string[] = [];
 
-  const redactKey = (key) => {
+  const redactKey = (key: string) => {
     if (!key) return '';
     const parts = key.split('-');
     if (parts.length !== 4) return key.slice(0, 8) + '•••••••••••••••••';
     return `${parts[0]}-••••-••••-${parts[3]}`;
   };
 
-  const formatDate = (isoString) => {
+  const formatDate = (isoString: string) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
