@@ -11,6 +11,15 @@ import { AuthButton } from './AuthButton';
 import { getApp, isRedirectAllowed, type AppConfig } from '../lib/apps';
 import { authClient } from '../lib/auth-client';
 
+// TypeScript definitions for WebAuthn conditional UI
+declare global {
+  interface Window {
+    PublicKeyCredential: {
+      isConditionalMediationAvailable?: () => Promise<boolean>;
+    };
+  }
+}
+
 // SVG Icons for OAuth providers
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-full h-full">
@@ -71,6 +80,7 @@ export function LoginGateway() {
   const [email, setEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [authMethod, setAuthMethod] = useState<'magiclink' | 'otp' | 'passkey' | null>(null);
+  const [supportsConditionalUI, setSupportsConditionalUI] = useState(false);
 
   // App + redirect handling
   const [app, setApp] = useState<AppConfig | null>(null);
@@ -137,6 +147,46 @@ export function LoginGateway() {
       // ignore
     }
   }, []);
+
+  // Check for conditional UI support and preload passkeys for autofill
+  useEffect(() => {
+    (async () => {
+      // Check if browser supports conditional UI
+      if (
+        typeof window !== 'undefined' &&
+        window.PublicKeyCredential &&
+        typeof window.PublicKeyCredential.isConditionalMediationAvailable === 'function'
+      ) {
+        try {
+          const available = await window.PublicKeyCredential.isConditionalMediationAvailable();
+          setSupportsConditionalUI(available);
+          
+          // If supported, preload passkeys for autofill
+          if (available) {
+            const target = redirectUrl && app && isRedirectAllowed(app, redirectUrl)
+              ? redirectUrl
+              : '/dashboard';
+            
+            // Start autofill passkey prompt in background
+            void client.signIn.passkey({
+              autoFill: true,
+              fetchOptions: {
+                onSuccess() {
+                  window.location.href = target;
+                },
+                onError(ctx) {
+                  // Silently fail for autofill - user can still click the button
+                  console.debug('Autofill passkey not used:', ctx.error);
+                },
+              },
+            });
+          }
+        } catch (err) {
+          console.debug('Conditional UI check failed:', err);
+        }
+      }
+    })();
+  }, [app, redirectUrl]);
 
   // After login, Better Auth will return to our origin; if already signed in, redirect to target
   useEffect(() => {
@@ -287,7 +337,15 @@ export function LoginGateway() {
 
         {/* Passwordless Methods */}
         <div className="space-y-2.5 mb-5">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Passwordless</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Passwordless</h2>
+            {/* {supportsConditionalUI && (
+              <span className="text-[10px] text-green-400 flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                Autofill Ready
+              </span>
+            )} */}
+          </div>
           
           <AuthButton
             provider="passkey"
@@ -316,6 +374,7 @@ export function LoginGateway() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email webauthn"
                 className="w-full px-3 py-2 rounded-lg bg-gray-700/50 border border-gray-600 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <div className="grid grid-cols-2 gap-2">
