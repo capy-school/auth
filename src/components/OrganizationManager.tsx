@@ -1,40 +1,156 @@
-import React, { useState } from 'react';
-import { authClient } from '../lib/auth-client';
+import React, { useState, useEffect } from "react";
+import { authClient } from "../lib/auth-client";
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
+  metadata?: any;
+  createdAt: string;
+}
+
+interface Member {
+  id: string;
+  userId: string;
+  role: "owner" | "admin" | "member";
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  };
+  createdAt: string;
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: "owner" | "admin" | "member";
+  status: "pending" | "accepted" | "rejected" | "canceled";
+  expiresAt: string;
+  organizationId: string;
+}
 
 export default function OrganizationManager() {
-  const [view, setView] = useState<'list' | 'create' | 'details'>('list');
+  const [view, setView] = useState<"list" | "create" | "details">("list");
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Create org form
-  const [newOrgName, setNewOrgName] = useState('');
-  const [newOrgSlug, setNewOrgSlug] = useState('');
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgSlug, setNewOrgSlug] = useState("");
 
   // Invite form
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
 
-  // Use Better Auth React hooks
-  const organizations = authClient.useListOrganizations();
-  const members = authClient.useListMembers({
-    organizationId: activeOrgId || undefined,
-  });
-  const invitations = authClient.useListInvitations({
-    organizationId: activeOrgId || undefined,
-  });
+  // State for data
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+  // Load organizations on mount
+  useEffect(() => {
+    loadOrganizations();
+  }, []);
+
+  // Load members and invitations when activeOrgId changes
+  useEffect(() => {
+    if (activeOrgId) {
+      loadMembers(activeOrgId);
+      loadInvitations(activeOrgId);
+    }
+  }, [activeOrgId]);
 
   // Set first org as active when data loads
-  React.useEffect(() => {
-    if (!activeOrgId && organizations.data?.length > 0) {
-      setActiveOrgId(organizations.data[0].id);
+  useEffect(() => {
+    if (!activeOrgId && organizations.length > 0) {
+      setActiveOrgId(organizations[0].id);
     }
-  }, [organizations.data, activeOrgId]);
+  }, [organizations, activeOrgId]);
+
+  const loadOrganizations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await authClient.organization.list();
+      if (error) {
+        setError(error.message || "Failed to load organizations");
+      } else if (data) {
+        // Transform data to ensure logo is never undefined
+        const formattedData = data.map((org) => ({
+          ...org,
+          logo: org.logo ?? null,
+          createdAt: org.createdAt instanceof Date 
+            ? org.createdAt.toISOString() 
+            : org.createdAt,
+        }));
+        setOrganizations(formattedData);
+      }
+    } catch (e: any) {
+      console.error("Organization load error:", e);
+      setError(e?.message || "Failed to load organizations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMembers = async (orgId: string) => {
+    try {
+      const { data, error } = await authClient.organization.listMembers({
+        query: {
+          organizationId: orgId,
+        },
+      });
+      if (!error && data) {
+        // Cast role to the expected type
+        const typedMembers = data.members.map(member => ({
+          ...member,
+          role: member.role as "owner" | "admin" | "member",
+          createdAt: member.createdAt instanceof Date 
+            ? member.createdAt.toISOString() 
+            : member.createdAt,
+          user: {
+            ...member.user,
+            name: member.user.name || null,
+            image: member.user.image || null,
+          }
+        }));
+        setMembers(typedMembers);
+      }
+    } catch (e) {
+      console.error("Failed to load members:", e);
+    }
+  };
+
+  const loadInvitations = async (orgId: string) => {
+    try {
+      const { data, error } = await authClient.organization.listInvitations({
+        query: {
+          organizationId: orgId,
+        },
+      });
+      if (!error && data) {
+        // Convert Date objects to strings to match the Invitation interface
+        const formattedData = data.map((inv) => ({
+          ...inv,
+          expiresAt: inv.expiresAt instanceof Date 
+            ? inv.expiresAt.toISOString() 
+            : inv.expiresAt,
+        }));
+        setInvitations(formattedData);
+      }
+    } catch (e) {
+      console.error("Failed to load invitations:", e);
+    }
+  };
 
   const createOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrgName.trim() || !newOrgSlug.trim()) {
-      setError('Name and slug are required');
+      setError("Name and slug are required");
       return;
     }
 
@@ -46,20 +162,19 @@ export default function OrganizationManager() {
         slug: newOrgSlug.trim(),
         keepCurrentActiveOrganization: false,
       });
-      
+
       if (error) {
-        console.error('Create org error:', error);
-        setError(error.message || 'Failed to create organization');
+        console.error("Create org error:", error);
+        setError(error.message || "Failed to create organization");
       } else if (data) {
-        setNewOrgName('');
-        setNewOrgSlug('');
-        setView('list');
-        // Hooks will automatically refetch
-        organizations.refetch?.();
+        setNewOrgName("");
+        setNewOrgSlug("");
+        setView("list");
+        await loadOrganizations();
       }
     } catch (e: any) {
-      console.error('Create org exception:', e);
-      setError(e?.message || 'Failed to create organization');
+      console.error("Create org exception:", e);
+      setError(e?.message || "Failed to create organization");
     } finally {
       setLoading(false);
     }
@@ -77,53 +192,53 @@ export default function OrganizationManager() {
         email: inviteEmail.trim(),
         role: inviteRole,
       });
-      
+
       if (error) {
-        setError(error.message || 'Failed to send invitation');
+        setError(error.message || "Failed to send invitation");
       } else if (data) {
-        setInviteEmail('');
-        invitations.refetch?.();
+        setInviteEmail("");
+        if (activeOrgId) await loadInvitations(activeOrgId);
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to send invitation');
+      setError(e?.message || "Failed to send invitation");
     } finally {
       setLoading(false);
     }
   };
 
   const removeMember = async (memberId: string) => {
-    if (!activeOrgId || !confirm('Remove this member?')) return;
+    if (!activeOrgId || !confirm("Remove this member?")) return;
 
     setLoading(true);
     try {
       const { error } = await authClient.organization.removeMember({
         memberIdOrEmail: memberId,
       });
-      
-      if (!error) {
-        members.refetch?.();
+
+      if (!error && activeOrgId) {
+        await loadMembers(activeOrgId);
       }
     } catch (e) {
-      console.error('Failed to remove member:', e);
+      console.error("Failed to remove member:", e);
     } finally {
       setLoading(false);
     }
   };
 
   const cancelInvitation = async (invitationId: string) => {
-    if (!activeOrgId || !confirm('Cancel this invitation?')) return;
+    if (!activeOrgId || !confirm("Cancel this invitation?")) return;
 
     setLoading(true);
     try {
       const { error } = await authClient.organization.cancelInvitation({
         invitationId,
       });
-      
-      if (!error) {
-        invitations.refetch?.();
+
+      if (!error && activeOrgId) {
+        await loadInvitations(activeOrgId);
       }
     } catch (e) {
-      console.error('Failed to cancel invitation:', e);
+      console.error("Failed to cancel invitation:", e);
     } finally {
       setLoading(false);
     }
@@ -134,24 +249,26 @@ export default function OrganizationManager() {
       const { error } = await authClient.organization.setActive({
         organizationId: orgId,
       });
-      
+
       if (!error) {
         setActiveOrgId(orgId);
       }
     } catch (e) {
-      console.error('Failed to set active organization:', e);
+      console.error("Failed to set active organization:", e);
     }
   };
 
-  const activeOrg = organizations.data?.find((o: any) => o.id === activeOrgId);
+  const activeOrg = organizations.find((o) => o.id === activeOrgId);
 
-  if (view === 'create') {
+  if (view === "create") {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Create Organization</h2>
+          <h2 className="text-xl font-semibold text-white">
+            Create Organization
+          </h2>
           <button
-            onClick={() => setView('list')}
+            onClick={() => setView("list")}
             className="text-sm text-gray-400 hover:text-white"
           >
             Cancel
@@ -169,7 +286,12 @@ export default function OrganizationManager() {
               onChange={(e) => {
                 setNewOrgName(e.target.value);
                 // Auto-generate slug
-                setNewOrgSlug(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+                setNewOrgSlug(
+                  e.target.value
+                    .toLowerCase()
+                    .replace(/\s+/g, "-")
+                    .replace(/[^a-z0-9-]/g, "")
+                );
               }}
               className="w-full px-3 py-2 rounded-lg bg-gray-700/50 border border-gray-600 text-white"
               placeholder="Acme Corp"
@@ -184,12 +306,18 @@ export default function OrganizationManager() {
             <input
               type="text"
               value={newOrgSlug}
-              onChange={(e) => setNewOrgSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              onChange={(e) =>
+                setNewOrgSlug(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                )
+              }
               className="w-full px-3 py-2 rounded-lg bg-gray-700/50 border border-gray-600 text-white font-mono text-sm"
               placeholder="acme-corp"
               required
             />
-            <p className="text-xs text-gray-400 mt-1">Only lowercase letters, numbers, and hyphens</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Only lowercase letters, numbers, and hyphens
+            </p>
           </div>
 
           {error && (
@@ -203,72 +331,78 @@ export default function OrganizationManager() {
             disabled={loading}
             className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
           >
-            {loading ? 'Creating...' : 'Create Organization'}
+            {loading ? "Creating..." : "Create Organization"}
           </button>
         </form>
       </div>
     );
   }
 
-  if (view === 'list') {
+  if (view === "list") {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Your Organizations</h2>
+          <h2 className="text-xl font-semibold text-white">
+            Your Organizations
+          </h2>
           <button
-            onClick={() => setView('create')}
+            onClick={() => setView("create")}
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
           >
             + New Organization
           </button>
         </div>
 
-      {(error || organizations.error) && (
-        <div className="text-sm text-red-400">{error || organizations.error?.message}</div>
-      )}
+        {error && <div className="text-sm text-red-400">{error}</div>}
 
-      {organizations.isPending ? (
-        <div className="text-gray-400 text-sm">Loading...</div>
-      ) : !organizations.data || organizations.data.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 border border-gray-700 rounded-lg">
-          <div className="text-6xl mb-3">🏢</div>
-          <p className="text-sm font-medium mb-1">No Organizations</p>
-          <p className="text-xs text-gray-500">Create your first organization to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {organizations.data.map((org: any) => (
-            <div
-              key={org.id}
-              className={`p-4 rounded-lg border ${
-                activeOrgId === org.id
-                  ? 'bg-blue-500/10 border-blue-500/50'
-                  : 'bg-gray-700/40 border-gray-600/50 hover:bg-gray-700/60'
-              } transition-all cursor-pointer`}
-              onClick={() => {
-                setActiveOrgId(org.id);
-                setView('details');
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {org.logo ? (
-                    <img src={org.logo} alt={org.name} className="w-10 h-10 rounded" />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                      {org.name.charAt(0).toUpperCase()}
+        {loading && organizations.length === 0 ? (
+          <div className="text-gray-400 text-sm">Loading...</div>
+        ) : organizations.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 border border-gray-700 rounded-lg">
+            <div className="text-6xl mb-3">🏢</div>
+            <p className="text-sm font-medium mb-1">No Organizations</p>
+            <p className="text-xs text-gray-500">
+              Create your first organization to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {organizations.map((org) => (
+              <div
+                key={org.id}
+                className={`p-4 rounded-lg border ${
+                  activeOrgId === org.id
+                    ? "bg-blue-500/10 border-blue-500/50"
+                    : "bg-gray-700/40 border-gray-600/50 hover:bg-gray-700/60"
+                } transition-all cursor-pointer`}
+                onClick={() => {
+                  setActiveOrgId(org.id);
+                  setView("details");
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {org.logo ? (
+                      <img
+                        src={org.logo}
+                        alt={org.name}
+                        className="w-10 h-10 rounded"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                        {org.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-white">{org.name}</h3>
+                      <p className="text-xs text-gray-400">/{org.slug}</p>
                     </div>
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-white">{org.name}</h3>
-                    <p className="text-xs text-gray-400">/{org.slug}</p>
                   </div>
-                </div>
-                {activeOrgId === org.id && (
-                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30">
-                    Active
-                  </span>
-                )}
+                  {activeOrgId === org.id && (
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30">
+                      Active
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -284,12 +418,14 @@ export default function OrganizationManager() {
       <div className="flex items-center justify-between">
         <div>
           <button
-            onClick={() => setView('list')}
+            onClick={() => setView("list")}
             className="text-sm text-blue-400 hover:text-blue-300 mb-2 flex items-center gap-1"
           >
             ← Back to Organizations
           </button>
-          <h2 className="text-xl font-semibold text-white">{activeOrg?.name}</h2>
+          <h2 className="text-xl font-semibold text-white">
+            {activeOrg?.name}
+          </h2>
           <p className="text-sm text-gray-400">/{activeOrg?.slug}</p>
         </div>
       </div>
@@ -298,31 +434,39 @@ export default function OrganizationManager() {
       <div className="space-y-3">
         <h3 className="text-lg font-semibold text-white">Members</h3>
         <div className="space-y-2">
-          {members.data?.map((member: any) => (
+          {members.map((member) => (
             <div
               key={member.id}
               className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2"
             >
               <div className="flex items-center gap-3">
                 {member.user.image ? (
-                  <img src={member.user.image} alt={member.user.name || ''} className="w-8 h-8 rounded-full" />
+                  <img
+                    src={member.user.image}
+                    alt={member.user.name || ""}
+                    className="w-8 h-8 rounded-full"
+                  />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm">
-                    {(member.user.name || member.user.email).charAt(0).toUpperCase()}
+                    {(member.user.name || member.user.email)
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
                 )}
                 <div>
                   <div className="text-sm text-white font-medium">
                     {member.user.name || member.user.email}
                   </div>
-                  <div className="text-xs text-gray-400">{member.user.email}</div>
+                  <div className="text-xs text-gray-400">
+                    {member.user.email}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-1 bg-gray-600 text-gray-200 text-xs rounded capitalize">
                   {member.role}
                 </span>
-                {member.role !== 'owner' && (
+                {member.role !== "owner" && (
                   <button
                     onClick={() => removeMember(member.id)}
                     className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-xs"
@@ -351,7 +495,9 @@ export default function OrganizationManager() {
           />
           <select
             value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
+            onChange={(e) =>
+              setInviteRole(e.target.value as "admin" | "member")
+            }
             className="px-3 py-2 rounded-lg bg-gray-700/50 border border-gray-600 text-white text-sm"
           >
             <option value="member">Member</option>
@@ -368,30 +514,35 @@ export default function OrganizationManager() {
       </div>
 
       {/* Pending Invitations */}
-      {invitations.data && invitations.data.length > 0 && (
+      {invitations.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-white">Pending Invitations</h3>
+          <h3 className="text-lg font-semibold text-white">
+            Pending Invitations
+          </h3>
           <div className="space-y-2">
-            {invitations.data?.filter((inv: any) => inv.status === 'pending').map((invitation: any) => (
-              <div
-                key={invitation.id}
-                className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2"
-              >
-                <div>
-                  <div className="text-sm text-white">{invitation.email}</div>
-                  <div className="text-xs text-gray-400 capitalize">
-                    {invitation.role} • Expires {new Date(invitation.expiresAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <button
-                  onClick={() => cancelInvitation(invitation.id)}
-                  className="px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white text-xs"
-                  disabled={loading}
+            {invitations
+              .filter((inv) => inv.status === "pending")
+              .map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2"
                 >
-                  Cancel
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <div className="text-sm text-white">{invitation.email}</div>
+                    <div className="text-xs text-gray-400 capitalize">
+                      {invitation.role} • Expires{" "}
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => cancelInvitation(invitation.id)}
+                    className="px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white text-xs"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       )}
