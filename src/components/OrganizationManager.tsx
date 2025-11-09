@@ -218,38 +218,10 @@ export default function OrganizationManager() {
           <button
             onClick={() => setView('create')}
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+          >
+            + New Organization
+          </button>
         </div>
-
-        {error && (
-          <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded p-2">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
-        >
-          {loading ? 'Creating...' : 'Create Organization'}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-if (view === 'list') {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">Your Organizations</h2>
-        <button
-          onClick={() => setView('create')}
-          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-        >
-          + New Organization
-        </button>
-      </div>
 
       {(error || organizations.error) && (
         <div className="text-sm text-red-400">{error || organizations.error?.message}</div>
@@ -285,31 +257,18 @@ if (view === 'list') {
                   ) : (
                     <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                       {org.name.charAt(0).toUpperCase()}
-                } transition-all cursor-pointer`}
-                onClick={() => {
-                  setActiveOrgId(org.id);
-                  setView('details');
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {org.logo ? (
-                      <img src={org.logo} alt={org.name} className="w-10 h-10 rounded" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                        {org.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-white">{org.name}</h3>
-                      <p className="text-xs text-gray-400">/{org.slug}</p>
                     </div>
-                  </div>
-                  {activeOrgId === org.id && (
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30">
-                      Active
-                    </span>
                   )}
+                  <div>
+                    <h3 className="font-semibold text-white">{org.name}</h3>
+                    <p className="text-xs text-gray-400">/{org.slug}</p>
+                  </div>
+                </div>
+                {activeOrgId === org.id && (
+                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded border border-blue-500/30">
+                    Active
+                  </span>
+                )}
                 </div>
               </div>
             ))}
@@ -339,7 +298,7 @@ if (view === 'list') {
       <div className="space-y-3">
         <h3 className="text-lg font-semibold text-white">Members</h3>
         <div className="space-y-2">
-          {members.map((member) => (
+          {members.data?.map((member: any) => (
             <div
               key={member.id}
               className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2"
@@ -409,11 +368,11 @@ if (view === 'list') {
       </div>
 
       {/* Pending Invitations */}
-      {invitations.length > 0 && (
+      {invitations.data && invitations.data.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-white">Pending Invitations</h3>
           <div className="space-y-2">
-            {invitations.filter(inv => inv.status === 'pending').map((invitation) => (
+            {invitations.data?.filter((inv: any) => inv.status === 'pending').map((invitation: any) => (
               <div
                 key={invitation.id}
                 className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2"
