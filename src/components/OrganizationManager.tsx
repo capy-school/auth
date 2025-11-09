@@ -1,45 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { authClient } from '../lib/auth-client';
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo: string | null;
-  metadata: any;
-  createdAt: string;
-}
-
-interface Member {
-  id: string;
-  userId: string;
-  role: 'owner' | 'admin' | 'member';
-  user: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-  createdAt: string;
-}
-
-interface Invitation {
-  id: string;
-  email: string;
-  role: 'owner' | 'admin' | 'member';
-  status: 'pending' | 'accepted' | 'rejected' | 'canceled';
-  expiresAt: string;
-  organizationId: string;
-}
-
 export default function OrganizationManager() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'create' | 'details'>('list');
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Create org form
   const [newOrgName, setNewOrgName] = useState('');
@@ -49,78 +15,21 @@ export default function OrganizationManager() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
 
-  const loadOrganizations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res: any = await authClient.organization.list();
-      if (res?.error) {
-        const errorMsg = res.error.message || 'Failed to load organizations';
-        // Check if it's an authentication error
-        if (errorMsg.includes('Unauthorized') || errorMsg.includes('401')) {
-          setError('Please sign in again to manage organizations');
-        } else {
-          setError(errorMsg);
-        }
-      } else {
-        setOrganizations(res?.data || []);
-        // Set first org as active if none selected
-        if (!activeOrgId && res?.data?.length > 0) {
-          setActiveOrgId(res.data[0].id);
-        }
-      }
-    } catch (e: any) {
-      console.error('Organization load error:', e);
-      if (e?.message?.includes('NetworkError') || e?.message?.includes('fetch')) {
-        setError('Network error. Please check your connection and try again.');
-      } else {
-        setError(e?.message || 'Failed to load organizations');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use Better Auth React hooks
+  const organizations = authClient.useListOrganizations();
+  const members = authClient.useListMembers({
+    organizationId: activeOrgId || undefined,
+  });
+  const invitations = authClient.useListInvitations({
+    organizationId: activeOrgId || undefined,
+  });
 
-  const loadMembers = async (orgId: string) => {
-    try {
-      const res: any = await authClient.organization.listMembers({
-        organizationId: orgId,
-      });
-      if (res?.error) {
-        console.error('Failed to load members:', res.error);
-      } else {
-        setMembers(res?.data || []);
-      }
-    } catch (e) {
-      console.error('Failed to load members:', e);
+  // Set first org as active when data loads
+  React.useEffect(() => {
+    if (!activeOrgId && organizations.data?.length > 0) {
+      setActiveOrgId(organizations.data[0].id);
     }
-  };
-
-  const loadInvitations = async (orgId: string) => {
-    try {
-      const res: any = await authClient.organization.listInvitations({
-        organizationId: orgId,
-      });
-      if (res?.error) {
-        console.error('Failed to load invitations:', res.error);
-      } else {
-        setInvitations(res?.data || []);
-      }
-    } catch (e) {
-      console.error('Failed to load invitations:', e);
-    }
-  };
-
-  useEffect(() => {
-    loadOrganizations();
-  }, []);
-
-  useEffect(() => {
-    if (activeOrgId) {
-      loadMembers(activeOrgId);
-      loadInvitations(activeOrgId);
-    }
-  }, [activeOrgId]);
+  }, [organizations.data, activeOrgId]);
 
   const createOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,27 +41,25 @@ export default function OrganizationManager() {
     setLoading(true);
     setError(null);
     try {
-      const res: any = await authClient.organization.create({
+      const { data, error } = await authClient.organization.create({
         name: newOrgName.trim(),
         slug: newOrgSlug.trim(),
+        keepCurrentActiveOrganization: false,
       });
-      if (res?.error) {
-        const errorMsg = res.error.message || 'Failed to create organization';
-        console.error('Create org error:', res.error);
-        setError(errorMsg);
-      } else {
+      
+      if (error) {
+        console.error('Create org error:', error);
+        setError(error.message || 'Failed to create organization');
+      } else if (data) {
         setNewOrgName('');
         setNewOrgSlug('');
         setView('list');
-        await loadOrganizations();
+        // Hooks will automatically refetch
+        organizations.refetch?.();
       }
     } catch (e: any) {
       console.error('Create org exception:', e);
-      if (e?.message?.includes('NetworkError') || e?.message?.includes('fetch')) {
-        setError('Network error. Please check your connection and try again.');
-      } else {
-        setError(e?.message || 'Failed to create organization');
-      }
+      setError(e?.message || 'Failed to create organization');
     } finally {
       setLoading(false);
     }
@@ -165,16 +72,17 @@ export default function OrganizationManager() {
     setLoading(true);
     setError(null);
     try {
-      const res: any = await authClient.organization.inviteMember({
+      const { data, error } = await authClient.organization.inviteMember({
         organizationId: activeOrgId,
         email: inviteEmail.trim(),
         role: inviteRole,
       });
-      if (res?.error) {
-        setError(res.error.message || 'Failed to send invitation');
-      } else {
+      
+      if (error) {
+        setError(error.message || 'Failed to send invitation');
+      } else if (data) {
         setInviteEmail('');
-        await loadInvitations(activeOrgId);
+        invitations.refetch?.();
       }
     } catch (e: any) {
       setError(e?.message || 'Failed to send invitation');
@@ -188,12 +96,12 @@ export default function OrganizationManager() {
 
     setLoading(true);
     try {
-      const res: any = await authClient.organization.removeMember({
-        organizationId: activeOrgId,
-        memberId,
+      const { error } = await authClient.organization.removeMember({
+        memberIdOrEmail: memberId,
       });
-      if (!res?.error) {
-        await loadMembers(activeOrgId);
+      
+      if (!error) {
+        members.refetch?.();
       }
     } catch (e) {
       console.error('Failed to remove member:', e);
@@ -207,11 +115,12 @@ export default function OrganizationManager() {
 
     setLoading(true);
     try {
-      const res: any = await authClient.organization.cancelInvitation({
+      const { error } = await authClient.organization.cancelInvitation({
         invitationId,
       });
-      if (!res?.error) {
-        await loadInvitations(activeOrgId);
+      
+      if (!error) {
+        invitations.refetch?.();
       }
     } catch (e) {
       console.error('Failed to cancel invitation:', e);
@@ -222,10 +131,11 @@ export default function OrganizationManager() {
 
   const setActiveOrganization = async (orgId: string) => {
     try {
-      const res: any = await authClient.organization.setActive({
+      const { error } = await authClient.organization.setActive({
         organizationId: orgId,
       });
-      if (!res?.error) {
+      
+      if (!error) {
         setActiveOrgId(orgId);
       }
     } catch (e) {
@@ -233,7 +143,7 @@ export default function OrganizationManager() {
     }
   };
 
-  const activeOrg = organizations.find(o => o.id === activeOrgId);
+  const activeOrg = organizations.data?.find((o: any) => o.id === activeOrgId);
 
   if (view === 'create') {
     return (
@@ -308,32 +218,73 @@ export default function OrganizationManager() {
           <button
             onClick={() => setView('create')}
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-          >
-            + New Organization
-          </button>
         </div>
 
         {error && (
-          <div className="text-sm text-red-400">{error}</div>
+          <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded p-2">
+            {error}
+          </div>
         )}
 
-        {loading && organizations.length === 0 ? (
-          <div className="text-gray-400 text-sm">Loading...</div>
-        ) : organizations.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 border border-gray-700 rounded-lg">
-            <div className="text-6xl mb-3">🏢</div>
-            <p className="text-sm font-medium mb-1">No Organizations</p>
-            <p className="text-xs text-gray-500">Create your first organization to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {organizations.map((org) => (
-              <div
-                key={org.id}
-                className={`p-4 rounded-lg border ${
-                  activeOrgId === org.id
-                    ? 'bg-blue-500/10 border-blue-500/50'
-                    : 'bg-gray-700/40 border-gray-600/50 hover:bg-gray-700/60'
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+        >
+          {loading ? 'Creating...' : 'Create Organization'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+if (view === 'list') {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">Your Organizations</h2>
+        <button
+          onClick={() => setView('create')}
+          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+        >
+          + New Organization
+        </button>
+      </div>
+
+      {(error || organizations.error) && (
+        <div className="text-sm text-red-400">{error || organizations.error?.message}</div>
+      )}
+
+      {organizations.isPending ? (
+        <div className="text-gray-400 text-sm">Loading...</div>
+      ) : !organizations.data || organizations.data.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 border border-gray-700 rounded-lg">
+          <div className="text-6xl mb-3">🏢</div>
+          <p className="text-sm font-medium mb-1">No Organizations</p>
+          <p className="text-xs text-gray-500">Create your first organization to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {organizations.data.map((org: any) => (
+            <div
+              key={org.id}
+              className={`p-4 rounded-lg border ${
+                activeOrgId === org.id
+                  ? 'bg-blue-500/10 border-blue-500/50'
+                  : 'bg-gray-700/40 border-gray-600/50 hover:bg-gray-700/60'
+              } transition-all cursor-pointer`}
+              onClick={() => {
+                setActiveOrgId(org.id);
+                setView('details');
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {org.logo ? (
+                    <img src={org.logo} alt={org.name} className="w-10 h-10 rounded" />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                      {org.name.charAt(0).toUpperCase()}
                 } transition-all cursor-pointer`}
                 onClick={() => {
                   setActiveOrgId(org.id);
