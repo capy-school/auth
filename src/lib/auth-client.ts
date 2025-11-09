@@ -10,6 +10,9 @@ import {
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.PUBLIC_AUTH_URL || "http://localhost:4321",
+  fetchOptions: {
+    credentials: "include",
+  },
   plugins: [
     genericOAuthClient(),
     twoFactorClient(),

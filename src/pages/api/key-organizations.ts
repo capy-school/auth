@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { auth } from '../../lib/auth';
+import type { Database } from '../../db/schema';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -13,7 +14,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const db = auth.options.database?.db;
+    const db = auth.options.database?.db as any;
     
     if (!db) {
       return new Response(
@@ -46,8 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Get all organizations where the user is a member
     const organizationMemberships = await db
-      .selectFrom('organizationMember')
-      .innerJoin('organization', 'organization.id', 'organizationMember.organizationId')
+      .selectFrom('member')
+      .innerJoin('organization', 'organization.id', 'member.organizationId')
       .select([
         'organization.id',
         'organization.name',
@@ -56,10 +57,10 @@ export const POST: APIRoute = async ({ request }) => {
         'organization.metadata',
         'organization.createdAt',
         'organization.updatedAt',
-        'organizationMember.role',
-        'organizationMember.createdAt as memberSince',
+        'member.role',
+        'member.createdAt as memberSince',
       ])
-      .where('organizationMember.userId', '=', keyData.userId)
+      .where('member.userId', '=', keyData.userId)
       .execute();
 
     // Update last used timestamp

@@ -8,7 +8,7 @@ export interface Database {
   passkey: PasskeyTable;
   twoFactor: TwoFactorTable;
   organization: OrganizationTable;
-  organizationMember: OrganizationMemberTable;
+  member: MemberTable;
   invitation: InvitationTable;
   apiKey: ApiKeyTable;
   oauthToken: OAuthTokenTable;
@@ -92,7 +92,7 @@ export interface OrganizationTable {
   updatedAt: ColumnType<Date, string | undefined, string>;
 }
 
-export interface OrganizationMemberTable {
+export interface MemberTable {
   id: string;
   organizationId: string;
   userId: string;

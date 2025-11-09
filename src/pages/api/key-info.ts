@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { auth } from '../../lib/auth';
+import type { Database } from '../../db/schema';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -15,7 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Verify API key and get associated user/organization info
     // Better Auth stores the key with userId
-    const db = auth.options.database?.db;
+    const db = auth.options.database?.db as any;
     
     if (!db) {
       return new Response(

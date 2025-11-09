@@ -55,7 +55,13 @@ export default function OrganizationManager() {
     try {
       const res: any = await authClient.organization.list();
       if (res?.error) {
-        setError(res.error.message || 'Failed to load organizations');
+        const errorMsg = res.error.message || 'Failed to load organizations';
+        // Check if it's an authentication error
+        if (errorMsg.includes('Unauthorized') || errorMsg.includes('401')) {
+          setError('Please sign in again to manage organizations');
+        } else {
+          setError(errorMsg);
+        }
       } else {
         setOrganizations(res?.data || []);
         // Set first org as active if none selected
@@ -64,7 +70,12 @@ export default function OrganizationManager() {
         }
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to load organizations');
+      console.error('Organization load error:', e);
+      if (e?.message?.includes('NetworkError') || e?.message?.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(e?.message || 'Failed to load organizations');
+      }
     } finally {
       setLoading(false);
     }
@@ -126,7 +137,9 @@ export default function OrganizationManager() {
         slug: newOrgSlug.trim(),
       });
       if (res?.error) {
-        setError(res.error.message || 'Failed to create organization');
+        const errorMsg = res.error.message || 'Failed to create organization';
+        console.error('Create org error:', res.error);
+        setError(errorMsg);
       } else {
         setNewOrgName('');
         setNewOrgSlug('');
@@ -134,7 +147,12 @@ export default function OrganizationManager() {
         await loadOrganizations();
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to create organization');
+      console.error('Create org exception:', e);
+      if (e?.message?.includes('NetworkError') || e?.message?.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(e?.message || 'Failed to create organization');
+      }
     } finally {
       setLoading(false);
     }

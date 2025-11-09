@@ -80,10 +80,13 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    crossSubDomainCookies: {
-      enabled: true,
-      domain: "capyschool.com", // your domain
-    },
+    crossSubDomainCookies:
+      getEnv("AUTH_BASE_URL", "").includes("capyschool.com")
+        ? {
+            enabled: true,
+            domain: "capyschool.com",
+          }
+        : undefined,
   },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
   trustedOrigins: [
