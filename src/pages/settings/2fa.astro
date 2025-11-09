@@ -171,8 +171,8 @@ if (isLocal) {
   </div>
 </Layout>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script>
+<script is:inline src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script is:inline>
   const STORAGE_KEY = '2fa_enabled';
   
   const generateSecret = () => {
@@ -190,12 +190,24 @@ if (isLocal) {
 
   const generateQRCode = (secret) => {
     const canvas = document.getElementById('qrCode');
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('Canvas element not found');
+      return;
+    }
+    
+    // Check if QRCode library is loaded
+    if (typeof QRCode === 'undefined') {
+      console.error('QRCode library not loaded');
+      setTimeout(() => generateQRCode(secret), 100); // Retry after 100ms
+      return;
+    }
     
     // Create TOTP URI - compatible with all authenticator apps including 1Password
     const issuer = 'CapySchool';
     const accountName = window.location.hostname;
     const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
+    
+    console.log('Generating QR code for:', otpauth);
     
     // Generate QR code
     QRCode.toCanvas(canvas, otpauth, {
@@ -209,7 +221,12 @@ if (isLocal) {
       if (error) {
         console.error('QR Code generation error:', error);
         // Fallback: show text if QR fails
-        canvas.parentElement.innerHTML = `<div class="text-gray-600 text-sm text-center p-8">Failed to generate QR code. Please use the manual code below.</div>`;
+        const container = canvas.parentElement;
+        if (container) {
+          container.innerHTML = `<div class="text-gray-600 text-sm text-center p-8">Failed to generate QR code. Please use the manual code below.</div>`;
+        }
+      } else {
+        console.log('QR code generated successfully');
       }
     });
   };
