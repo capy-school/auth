@@ -1,0 +1,88 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { auth } from '../lib/auth';
+
+// Get session to show user info before logout
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+const userName = session?.user?.name || session?.user?.email || 'User';
+---
+
+<Layout title="Sign Out">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-gray-800/50 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-gray-700">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-white mb-2">Sign Out</h1>
+        {session ? (
+          <p class="text-gray-400 text-sm">
+            Are you sure you want to sign out, <span class="text-white font-medium">{userName}</span>?
+          </p>
+        ) : (
+          <p class="text-gray-400 text-sm">You are not currently signed in</p>
+        )}
+      </div>
+
+      {session ? (
+        <div class="space-y-3">
+          <form action="/api/auth/sign-out" method="POST" class="w-full">
+            <button 
+              type="submit"
+              class="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Yes, Sign Out
+            </button>
+          </form>
+          
+          <a 
+            href="/dashboard"
+            class="block w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-center"
+          >
+            Cancel
+          </a>
+        </div>
+      ) : (
+        <a 
+          href="/"
+          class="block w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-center"
+        >
+          Go to Sign In
+        </a>
+      )}
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Handle successful logout - redirect to home
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const response = await fetch('/api/auth/sign-out', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          // Clear any local storage
+          localStorage.clear();
+          // Redirect to home
+          window.location.href = '/';
+        } else {
+          alert('Failed to sign out. Please try again.');
+        }
+      } catch (error) {
+        console.error('Sign out error:', error);
+        alert('An error occurred. Please try again.');
+      }
+    });
+  }
+</script>

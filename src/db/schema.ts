@@ -1,4 +1,4 @@
-import type { ColumnType } from 'kysely';
+import type { ColumnType } from "kysely";
 
 export interface Database {
   user: UserTable;
@@ -9,6 +9,7 @@ export interface Database {
   twoFactor: TwoFactorTable;
   organization: OrganizationTable;
   organizationMember: OrganizationMemberTable;
+  invitation: InvitationTable;
   apiKey: ApiKeyTable;
   oauthToken: OAuthTokenTable;
   oneTimeToken: OneTimeTokenTable;
@@ -20,7 +21,7 @@ export interface UserTable {
   emailVerified: number; // boolean as 0/1
   name: string | null;
   image: string | null;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   createdAt: ColumnType<Date, string | undefined, never>;
   updatedAt: ColumnType<Date, string | undefined, string>;
 }
@@ -31,6 +32,7 @@ export interface SessionTable {
   expiresAt: ColumnType<Date, string, string>;
   ipAddress: string | null;
   userAgent: string | null;
+  activeOrganizationId: string | null;
   createdAt: ColumnType<Date, string | undefined, never>;
 }
 
@@ -94,8 +96,20 @@ export interface OrganizationMemberTable {
   id: string;
   organizationId: string;
   userId: string;
-  role: 'owner' | 'admin' | 'member';
+  role: "owner" | "admin" | "member";
   createdAt: ColumnType<Date, string | undefined, never>;
+}
+
+export interface InvitationTable {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: "owner" | "admin" | "member";
+  status: "pending" | "accepted" | "rejected" | "canceled";
+  expiresAt: ColumnType<Date, string, string>;
+  inviterId: string;
+  createdAt: ColumnType<Date, string | undefined, never>;
+  updatedAt: ColumnType<Date, string | undefined, string>;
 }
 
 export interface ApiKeyTable {

@@ -1,15 +1,22 @@
-import { createAuthClient } from 'better-auth/client';
-import { genericOAuthClient, twoFactorClient, magicLinkClient, passkeyClient, apiKeyClient } from 'better-auth/client/plugins';
+import { createAuthClient } from "better-auth/client";
+import {
+  genericOAuthClient,
+  twoFactorClient,
+  magicLinkClient,
+  passkeyClient,
+  apiKeyClient,
+  organizationClient,
+} from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4321',
+  baseURL: import.meta.env.PUBLIC_AUTH_URL || "http://localhost:4321",
   plugins: [
-    genericOAuthClient(), 
+    genericOAuthClient(),
     twoFactorClient(),
     // phoneNumberClient(),
     magicLinkClient(),
-    passkeyClient(), 
-    apiKeyClient(), 
-    // organizationClient(),
+    passkeyClient(),
+    apiKeyClient(),
+    organizationClient(),
   ],
 });
