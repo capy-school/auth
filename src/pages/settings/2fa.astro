@@ -80,19 +80,23 @@ if (isLocal) {
                 Download an Authenticator App
               </h3>
               <p class="text-gray-400 text-sm mb-4">Install one of these apps on your phone:</p>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <a href="https://support.google.com/accounts/answer/1066447" target="_blank" rel="noopener noreferrer" class="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-all cursor-pointer">
                   <div class="font-medium text-white text-sm mb-1">Google Authenticator</div>
                   <div class="text-xs text-gray-400">iOS & Android</div>
-                </div>
-                <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                </a>
+                <a href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank" rel="noopener noreferrer" class="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-all cursor-pointer">
                   <div class="font-medium text-white text-sm mb-1">Microsoft Authenticator</div>
                   <div class="text-xs text-gray-400">iOS & Android</div>
-                </div>
-                <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                </a>
+                <a href="https://authy.com/download/" target="_blank" rel="noopener noreferrer" class="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-all cursor-pointer">
                   <div class="font-medium text-white text-sm mb-1">Authy</div>
                   <div class="text-xs text-gray-400">iOS & Android</div>
-                </div>
+                </a>
+                <a href="https://1password.com/" target="_blank" rel="noopener noreferrer" class="bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-all cursor-pointer">
+                  <div class="font-medium text-white text-sm mb-1">1Password</div>
+                  <div class="text-xs text-gray-400">iOS, Android & Desktop</div>
+                </a>
               </div>
             </div>
 
@@ -102,10 +106,8 @@ if (isLocal) {
                 Scan QR Code
               </h3>
               <div class="flex flex-col items-center gap-4">
-                <div class="bg-white p-6 rounded-lg" style="width: 192px; height: 192px;">
-                  <div style="width: 180px; height: 180px;" class="bg-gradient-to-br from-gray-200 to-gray-300 rounded flex items-center justify-center text-gray-600 text-6xl">
-                    📱
-                  </div>
+                <div id="qrContainer" class="bg-white p-4 rounded-lg">
+                  <canvas id="qrCode" width="256" height="256"></canvas>
                 </div>
                 <div class="text-center">
                   <p class="text-gray-400 text-sm mb-2">Or enter this code manually:</p>
@@ -169,6 +171,7 @@ if (isLocal) {
   </div>
 </Layout>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
   const STORAGE_KEY = '2fa_enabled';
   
@@ -178,7 +181,37 @@ if (isLocal) {
     for (let i = 0; i < 16; i++) {
       secret += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return secret;
+  };
+
+  const formatSecret = (secret) => {
     return secret.match(/.{1,4}/g).join(' ');
+  };
+
+  const generateQRCode = (secret) => {
+    const canvas = document.getElementById('qrCode');
+    if (!canvas) return;
+    
+    // Create TOTP URI - compatible with all authenticator apps including 1Password
+    const issuer = 'CapySchool';
+    const accountName = window.location.hostname;
+    const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
+    
+    // Generate QR code
+    QRCode.toCanvas(canvas, otpauth, {
+      width: 256,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    }, function (error) {
+      if (error) {
+        console.error('QR Code generation error:', error);
+        // Fallback: show text if QR fails
+        canvas.parentElement.innerHTML = `<div class="text-gray-600 text-sm text-center p-8">Failed to generate QR code. Please use the manual code below.</div>`;
+      }
+    });
   };
 
   const check2FAStatus = () => {
@@ -232,7 +265,10 @@ if (isLocal) {
       const secretCode = document.getElementById('secretCode');
       setupSection?.classList.remove('hidden');
       if (secretCode) {
-        secretCode.textContent = generateSecret();
+        const secret = generateSecret();
+        secretCode.textContent = formatSecret(secret);
+        // Generate QR code with the raw secret (no spaces)
+        generateQRCode(secret);
       }
     }
   });
