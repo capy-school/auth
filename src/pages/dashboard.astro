@@ -21,10 +21,11 @@ if (isLocal) {
     image: ''
   };
 } else {
-  user = await auth.api.getSession({ headers: Astro.request.headers });
-  if (!user) {
+  const session = await auth.api.getSession({ headers: Astro.request.headers });
+  if (!session?.user) {
     return Astro.redirect('/');
   }
+  user = session.user;
 }
 ---
 
