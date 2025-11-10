@@ -16,6 +16,9 @@ function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
 }
 
+const isDevelopment = getEnv("NODE_ENV", "development") === "development" || 
+                      getEnv("AUTH_BASE_URL", "").includes("localhost");
+
 interface Database {}
 const db = new Kysely<Database>({
   dialect: new LibsqlDialect({
@@ -153,7 +156,15 @@ export const auth = betterAuth({
         ""
       ),
     }),
-    apiKey(),
+    apiKey({
+      rateLimit: isDevelopment ? {
+        enabled: false, // Disable rate limiting in development
+      } : {
+        enabled: true,
+        maxRequests: 100,
+        timeWindow: 60, // 100 requests per 60 seconds in production
+      },
+    }),
     organization(),
     oAuthProxy({
       productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly

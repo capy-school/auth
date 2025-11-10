@@ -1,15 +1,23 @@
 import type { APIRoute } from 'astro';
-import { auth } from '../../lib/auth';
-import type { Database } from '../../db/schema';
+import { auth } from '../../../lib/auth';
 
-export const POST: APIRoute = async ({ request }) => {
+/**
+ * Get all organizations that the API key holder belongs to
+ * 
+ * GET /api/organizations
+ * Headers: X-API-Key or Authorization: Bearer <token>
+ */
+
+export const GET: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json();
-    const { apiKey } = body;
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'API key is required' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'API key is required in X-API-Key header or Authorization Bearer token'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -18,7 +26,10 @@ export const POST: APIRoute = async ({ request }) => {
     
     if (!db) {
       return new Response(
-        JSON.stringify({ error: 'Database not configured' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Database not configured' 
+        }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -33,6 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!verificationResult || !verificationResult.valid || !verificationResult.key) {
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: verificationResult?.error?.message || 'Invalid API key'
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -58,8 +70,6 @@ export const POST: APIRoute = async ({ request }) => {
       .where('member.userId', '=', keyData.userId)
       .execute();
 
-    // Note: Better Auth's verifyApiKey already updates lastUsedAt automatically
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -83,28 +93,13 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('API key organizations error:', error);
+    console.error('API organizations error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        success: false,
+        error: 'Internal server error'
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-};
-
-export const GET: APIRoute = async ({ request }) => {
-  const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'API key is required in X-API-Key header or Authorization Bearer token' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Reuse POST logic
-  return POST({ request: new Request(request.url, {
-    method: 'POST',
-    body: JSON.stringify({ apiKey }),
-    headers: request.headers,
-  }) } as any);
 };

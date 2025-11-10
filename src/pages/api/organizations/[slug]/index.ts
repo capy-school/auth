@@ -1,31 +1,37 @@
 import type { APIRoute } from 'astro';
-import { auth } from '../../lib/auth';
+import { auth } from '../../../../lib/auth';
 
 /**
- * Verify if an API key has access to a specific organization by slug
+ * Get detailed information about a specific organization by slug
+ * User must be a member of the organization to view its details
+ * Requires API key authentication
  * 
- * POST /api/verify-organization
- * Body: { apiKey: string, organizationSlug: string }
- * 
- * GET /api/verify-organization?organizationSlug=slug
+ * GET /api/organizations/:slug
  * Headers: X-API-Key or Authorization: Bearer <token>
  */
 
-export const POST: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const body = await request.json();
-    const { apiKey, organizationSlug } = body;
+    const { slug } = params;
 
-    if (!apiKey) {
+    if (!slug) {
       return new Response(
-        JSON.stringify({ error: 'API key is required' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Organization slug is required in URL path' 
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!organizationSlug) {
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
+
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'Organization slug is required' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'API key is required in X-API-Key header or Authorization Bearer token'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -34,7 +40,10 @@ export const POST: APIRoute = async ({ request }) => {
     
     if (!db) {
       return new Response(
-        JSON.stringify({ error: 'Database not configured' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Database not configured' 
+        }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -50,8 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: verificationResult?.error?.message || 'Invalid API key',
-          authorized: false 
+          error: verificationResult?.error?.message || 'Invalid API key'
         }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
@@ -59,7 +67,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const keyData = verificationResult.key;
 
-    // Find organization by slug and check if user is a member
+    // Get organization details and verify user membership
     const organizationMembership = await db
       .selectFrom('member')
       .innerJoin('organization', 'organization.id', 'member.organizationId')
@@ -74,7 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
         'member.createdAt as memberSince',
       ])
       .where('member.userId', '=', keyData.userId)
-      .where('organization.slug', '=', organizationSlug)
+      .where('organization.slug', '=', slug)
       .executeTakeFirst();
 
     if (!organizationMembership) {
@@ -82,9 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
         JSON.stringify({
           success: false,
           error: 'Organization not found or user not authorized',
-          authorized: false,
           details: {
-            organizationSlug,
+            organizationSlug: slug,
             userId: keyData.userId,
           }
         }),
@@ -92,12 +99,26 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Note: Better Auth's verifyApiKey already updates lastUsedAt automatically
+    // Get total member count for this organization
+    const memberCount = await db
+      .selectFrom('member')
+      .select(({ fn }: any) => [
+        fn.count('id').as('total')
+      ])
+      .where('organizationId', '=', organizationMembership.id)
+      .executeTakeFirst();
+
+    // Parse metadata
+    let metadata = null;
+    try {
+      metadata = organizationMembership.metadata ? JSON.parse(organizationMembership.metadata) : null;
+    } catch (e) {
+      metadata = null;
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        authorized: true,
         data: {
           keyId: keyData.id,
           keyName: keyData.name,
@@ -107,64 +128,28 @@ export const POST: APIRoute = async ({ request }) => {
             name: organizationMembership.name,
             slug: organizationMembership.slug,
             logo: organizationMembership.logo,
-            metadata: organizationMembership.metadata 
-              ? JSON.parse(organizationMembership.metadata) 
-              : null,
+            metadata,
             createdAt: organizationMembership.createdAt,
           },
           membership: {
             role: organizationMembership.role,
             memberSince: organizationMembership.memberSince,
-          }
+          },
+          stats: {
+            totalMembers: parseInt(memberCount?.total || '0'),
+          },
         },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Organization verification error:', error);
+    console.error('Organization detail error:', error);
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: 'Internal server error',
-        authorized: false 
+        error: 'Internal server error'
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-};
-
-export const GET: APIRoute = async ({ request, url }) => {
-  const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-  const organizationSlug = url.searchParams.get('organizationSlug');
-
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'API key is required in X-API-Key header or Authorization Bearer token',
-        authorized: false 
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!organizationSlug) {
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'organizationSlug query parameter is required',
-        authorized: false 
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Reuse POST logic
-  return POST({ 
-    request: new Request(request.url, {
-      method: 'POST',
-      body: JSON.stringify({ apiKey, organizationSlug }),
-      headers: request.headers,
-    }) 
-  } as any);
 };

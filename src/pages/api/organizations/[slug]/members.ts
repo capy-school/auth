@@ -1,37 +1,33 @@
 import type { APIRoute } from 'astro';
-import { auth } from '../../lib/auth';
+import { auth } from '../../../../lib/auth';
 
 /**
- * Get members of an organization by API key
- * User must be a member of the organization to view its members
+ * Get members of an organization by slug using API key
  * 
- * POST /api/organization-members
- * Body: { apiKey: string, organizationSlug: string }
- * 
- * GET /api/organization-members?organizationSlug=slug
+ * GET /api/organization/:slug/members
  * Headers: X-API-Key or Authorization: Bearer <token>
  */
 
-export const POST: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
-    const body = await request.json();
-    const { apiKey, organizationSlug } = body;
+    const { slug } = params;
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (!apiKey) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'API key is required' 
+          error: 'API key is required in X-API-Key header or Authorization Bearer token' 
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!organizationSlug) {
+    if (!slug) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'Organization slug is required' 
+          error: 'Organization slug is required in URL path' 
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
@@ -79,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
         'member.role as userRole',
       ])
       .where('member.userId', '=', keyData.userId)
-      .where('organization.slug', '=', organizationSlug)
+      .where('organization.slug', '=', slug)
       .executeTakeFirst();
 
     if (!userMembership) {
@@ -88,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
           success: false,
           error: 'Organization not found or user not authorized',
           details: {
-            organizationSlug,
+            organizationSlug: slug,
             userId: keyData.userId,
           }
         }),
@@ -155,38 +151,4 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-};
-
-export const GET: APIRoute = async ({ request, url }) => {
-  const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
-  const organizationSlug = url.searchParams.get('organizationSlug');
-
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'API key is required in X-API-Key header or Authorization Bearer token'
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!organizationSlug) {
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'organizationSlug query parameter is required'
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Reuse POST logic
-  return POST({ 
-    request: new Request(request.url, {
-      method: 'POST',
-      body: JSON.stringify({ apiKey, organizationSlug }),
-      headers: request.headers,
-    }) 
-  } as any);
 };
