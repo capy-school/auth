@@ -289,6 +289,92 @@ curl -X GET https://auth.capyschool.com/api/verify-consumption \
 
 ---
 
+### 5. Get Organization Members
+
+Get all members of an organization using an API key. The API key holder must be a member of the organization to view its members.
+
+**Endpoint:** `POST /api/organization-members`
+
+**Headers (alternative):** `GET /api/organization-members?organizationSlug=slug` with `X-API-Key` or `Authorization: Bearer {key}`
+
+**Request Body:**
+```json
+{
+  "apiKey": "your-api-key-here",
+  "organizationSlug": "org-slug"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "success": true,
+  "data": {
+    "organization": {
+      "id": "org-id",
+      "name": "Organization Name",
+      "slug": "org-slug"
+    },
+    "requestingUser": {
+      "userId": "user-id",
+      "role": "owner"
+    },
+    "members": [
+      {
+        "memberId": "member-id",
+        "userId": "user-id",
+        "role": "owner",
+        "memberSince": "2024-01-01T00:00:00.000Z",
+        "user": {
+          "id": "user-id",
+          "name": "John Doe",
+          "email": "john@example.com",
+          "image": "https://example.com/avatar.png",
+          "emailVerified": true
+        }
+      }
+    ],
+    "totalMembers": 1
+  }
+}
+```
+
+**Error Responses:**
+- `400`: API key or organization slug is required
+- `401`: Invalid API key or expired
+- `403`: Organization not found or user not authorized to view members
+- `500`: Internal server error
+
+**Example Usage:**
+
+```bash
+# POST method
+curl -X POST https://auth.capyschool.com/api/organization-members \
+  -H "Content-Type: application/json" \
+  -d '{"apiKey": "your-api-key", "organizationSlug": "my-org"}'
+
+# GET method with header
+curl -X GET "https://auth.capyschool.com/api/organization-members?organizationSlug=my-org" \
+  -H "X-API-Key: your-api-key"
+
+# GET method with Bearer token
+curl -X GET "https://auth.capyschool.com/api/organization-members?organizationSlug=my-org" \
+  -H "Authorization: Bearer your-api-key"
+```
+
+**Use Cases:**
+- List all members of an organization for admin dashboards
+- Sync organization membership to external systems
+- Audit organization access and roles
+- Build member management interfaces
+
+**Member Roles:**
+- `owner`: Organization owner with full permissions
+- `admin`: Administrator with most permissions
+- `member`: Regular member with basic permissions
+
+---
+
 ## Authentication Endpoints (Better Auth)
 
 ### Sign Out
