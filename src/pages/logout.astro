@@ -28,14 +28,13 @@ const userName = session?.user?.name || session?.user?.email || 'User';
 
       {session ? (
         <div class="space-y-3">
-          <form action="/api/auth/sign-out" method="POST" class="w-full">
-            <button 
-              type="submit"
-              class="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Yes, Sign Out
-            </button>
-          </form>
+          <button 
+            id="signOutBtn"
+            type="button"
+            class="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+          >
+            Yes, Sign Out
+          </button>
           
           <a 
             href="/dashboard"
@@ -57,31 +56,34 @@ const userName = session?.user?.name || session?.user?.email || 'User';
 </Layout>
 
 <script>
-  // Handle successful logout - redirect to home
-  const form = document.querySelector('form');
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
+  // Handle sign out
+  const signOutBtn = document.getElementById('signOutBtn');
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', async () => {
       try {
-        const response = await fetch('/api/auth/sign-out', {
+        // Disable button during request
+        signOutBtn.disabled = true;
+        signOutBtn.textContent = 'Signing out...';
+        
+        const response = await fetch('/api/sign-out', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
+          body: JSON.stringify({}),
         });
         
-        if (response.ok) {
-          // Clear any local storage
-          localStorage.clear();
-          // Redirect to home
-          window.location.href = '/';
-        } else {
-          alert('Failed to sign out. Please try again.');
-        }
+        // Clear any local storage regardless of response
+        localStorage.clear();
+        
+        // Redirect to home
+        window.location.href = '/';
       } catch (error) {
         console.error('Sign out error:', error);
-        alert('An error occurred. Please try again.');
+        // Still redirect even if there's an error
+        localStorage.clear();
+        window.location.href = '/';
       }
     });
   }
