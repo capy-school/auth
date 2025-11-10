@@ -186,11 +186,13 @@ export default function TwoFactorSetup({ userEmail = 'user@example.com' }: TwoFa
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white mb-4">Scan QR Code</h3>
-                <div className="bg-white rounded-lg p-4 inline-block">
-                  <canvas ref={canvasRef} id="qrCode" className="block"></canvas>
+                <div className="flex justify-center mb-4">
+                  <div className="bg-white rounded-lg p-4 inline-block">
+                    <canvas ref={canvasRef} id="qrCode" className="block"></canvas>
+                  </div>
                 </div>
-                <p className="text-gray-400 text-sm mt-4">Or enter this code manually:</p>
-                <code className="block bg-gray-900/50 px-4 py-3 rounded-lg text-green-400 font-mono text-sm mt-2 select-all">
+                <p className="text-gray-400 text-sm mt-4 text-center">Or enter this code manually:</p>
+                <code className="block bg-gray-900/50 px-4 py-3 rounded-lg text-green-400 font-mono text-sm mt-2 select-all text-center">
                   {formatSecret(secret)}
                 </code>
               </div>
