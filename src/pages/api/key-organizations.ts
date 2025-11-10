@@ -23,27 +23,23 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Verify API key and get userId
-    const keyData = await db
-      .selectFrom('apiKey')
-      .select(['id', 'userId', 'name', 'expiresAt'])
-      .where('key', '=', apiKey)
-      .executeTakeFirst();
+    // Verify API key using Better Auth's verifyApiKey method
+    const verificationResult = await auth.api.verifyApiKey({
+      body: {
+        key: apiKey,
+      },
+    });
 
-    if (!keyData) {
+    if (!verificationResult || !verificationResult.valid || !verificationResult.key) {
       return new Response(
-        JSON.stringify({ error: 'Invalid API key' }),
+        JSON.stringify({ 
+          error: verificationResult?.error?.message || 'Invalid API key'
+        }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if key is expired
-    if (keyData.expiresAt && new Date(keyData.expiresAt) < new Date()) {
-      return new Response(
-        JSON.stringify({ error: 'API key has expired' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const keyData = verificationResult.key;
 
     // Get all organizations where the user is a member
     const organizationMemberships = await db
@@ -56,19 +52,13 @@ export const POST: APIRoute = async ({ request }) => {
         'organization.logo',
         'organization.metadata',
         'organization.createdAt',
-        'organization.updatedAt',
         'member.role',
         'member.createdAt as memberSince',
       ])
       .where('member.userId', '=', keyData.userId)
       .execute();
 
-    // Update last used timestamp
-    await db
-      .updateTable('apiKey')
-      .set({ lastUsedAt: new Date().toISOString() })
-      .where('id', '=', keyData.id)
-      .execute();
+    // Note: Better Auth's verifyApiKey already updates lastUsedAt automatically
 
     return new Response(
       JSON.stringify({
@@ -77,7 +67,7 @@ export const POST: APIRoute = async ({ request }) => {
           keyId: keyData.id,
           keyName: keyData.name,
           userId: keyData.userId,
-          organizations: organizationMemberships.map(org => ({
+          organizations: organizationMemberships.map((org: any) => ({
             id: org.id,
             name: org.name,
             slug: org.slug,
@@ -86,7 +76,6 @@ export const POST: APIRoute = async ({ request }) => {
             role: org.role,
             memberSince: org.memberSince,
             createdAt: org.createdAt,
-            updatedAt: org.updatedAt,
           })),
           totalOrganizations: organizationMemberships.length,
         },
