@@ -187,7 +187,7 @@ export default function TwoFactorSetup({ userEmail = 'user@example.com' }: TwoFa
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white mb-4">Scan QR Code</h3>
                 <div className="flex justify-center mb-4">
-                  <div className="bg-white rounded-lg p-4 inline-block">
+                  <div className="bg-white rounded-lg p-4">
                     <canvas ref={canvasRef} id="qrCode" className="block"></canvas>
                   </div>
                 </div>
