@@ -16,8 +16,9 @@ function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
 }
 
-const isDevelopment = getEnv("NODE_ENV", "development") === "development" || 
-                      getEnv("AUTH_BASE_URL", "").includes("localhost");
+const isDevelopment =
+  getEnv("NODE_ENV", "development") === "development" ||
+  getEnv("AUTH_BASE_URL", "").includes("localhost");
 
 interface Database {}
 const db = new Kysely<Database>({
@@ -83,13 +84,14 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    crossSubDomainCookies:
-      getEnv("AUTH_BASE_URL", "").includes("capyschool.com")
-        ? {
-            enabled: true,
-            domain: "capyschool.com",
-          }
-        : undefined,
+    crossSubDomainCookies: getEnv("AUTH_BASE_URL", "").includes(
+      "capyschool.com"
+    )
+      ? {
+          enabled: true,
+          domain: "capyschool.com",
+        }
+      : undefined,
   },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
   trustedOrigins: [
@@ -157,13 +159,16 @@ export const auth = betterAuth({
       ),
     }),
     apiKey({
-      rateLimit: isDevelopment ? {
-        enabled: false, // Disable rate limiting in development
-      } : {
-        enabled: true,
-        maxRequests: 100,
-        timeWindow: 60, // 100 requests per 60 seconds in production
-      },
+      rateLimit:
+        isDevelopment || true
+          ? {
+              enabled: false, // Disable rate limiting in development
+            }
+          : {
+              enabled: true,
+              maxRequests: 100,
+              timeWindow: 60, // 100 requests per 60 seconds in production
+            },
     }),
     organization(),
     oAuthProxy({
