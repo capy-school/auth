@@ -5,7 +5,8 @@ import { auth } from '../lib/auth';
 
 const session = await auth.api.getSession({ headers: Astro.request.headers });
 if (session) {
-  return Astro.redirect('/dashboard');
+  // return Astro.redirect('/dashboard');
+  return Astro.redirect('https://www.capyschool.com');
 }
 ---
 <Layout title="Login Gateway - Secure Authentication" animated>
