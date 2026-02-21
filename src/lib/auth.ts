@@ -6,6 +6,7 @@ import {
   twoFactor,
   organization,
   openAPI,
+  oidcProvider,
 } from "better-auth/plugins";
 import { Kysely } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
@@ -84,14 +85,16 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    crossSubDomainCookies: getEnv("AUTH_BASE_URL", "").includes(
-      "capyschool.com"
-    )
-      ? {
-          enabled: true,
-          domain: "capyschool.com",
-        }
-      : undefined,
+    crossSubDomainCookies:
+      getEnv("AUTH_BASE_URL", "").includes("capyschool.com") ||
+      getEnv("AUTH_BASE_URL", "").includes("capy.town")
+        ? {
+            enabled: true,
+            domain: getEnv("AUTH_BASE_URL", "").includes("capyschool.com")
+              ? "capyschool.com"
+              : "capy.town",
+          }
+        : undefined,
   },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
   trustedOrigins: [
@@ -99,6 +102,8 @@ export const auth = betterAuth({
     "https://capyschool.com",
     "https://www.capyschool.com",
     "https://cms.capyschool.com",
+    "https://auth.capy.town",
+    "https://capy.town",
     // local dev
     "http://localhost:4321",
   ],
@@ -114,7 +119,7 @@ export const auth = betterAuth({
       sendMagicLink: async ({ email, token, url }, request) => {
         const appBase = getEnv(
           "AUTH_BASE_URL",
-          "http://localhost:4321"
+          "http://localhost:4321",
         ).replace(/\/+$/, "");
         const signInUrl =
           url ||
@@ -150,12 +155,12 @@ export const auth = betterAuth({
           } catch {
             return "localhost";
           }
-        })()
+        })(),
       ),
       rpName: getEnv("PASSKEY_RP_NAME", "CapySchool"),
       origin: getEnv("AUTH_BASE_URL", "http://localhost:4321").replace(
         /\/+$/,
-        ""
+        "",
       ),
     }),
     apiKey({
@@ -174,6 +179,13 @@ export const auth = betterAuth({
     oAuthProxy({
       productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly
       currentURL: "http://localhost:4321", // Optional - if the URL isn't inferred correctly
+    }),
+    oidcProvider({
+      loginPage: "/",
+      consentPage: "/auth/authorize",
+      allowDynamicClientRegistration: true,
+      accessTokenExpiresIn: 3600, // 1 hour
+      refreshTokenExpiresIn: 3600 * 24 * 30, // 30 days
     }),
     openAPI(),
   ],

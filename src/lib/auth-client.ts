@@ -11,10 +11,10 @@ import {
 // Automatically detect base URL based on environment
 const getBaseURL = () => {
   // In browser, use current origin if on production domain
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     const { origin, hostname } = window.location;
     // If on production domain, use current origin
-    if (hostname.includes('capyschool.com')) {
+    if (hostname.includes("capyschool.com") || hostname.includes("capy.town")) {
       return origin;
     }
   }
