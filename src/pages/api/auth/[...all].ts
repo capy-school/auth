@@ -1,5 +1,5 @@
-import type { APIRoute } from 'astro';
-import { auth } from '../../../lib/auth';
+import type { APIRoute } from "astro";
+import { auth } from "../../../lib/auth";
 
 const NODE_ENV = import.meta.env.NODE_ENV || process.env.NODE_ENV;
 
@@ -8,28 +8,38 @@ const ALLOWED_ORIGINS = new Set([
   "https://auth.capyschool.com",
   "https://capyschool.com",
   "https://www.capyschool.com",
-  "https://cms.capyschool.com",
+  "https://auth.capy.town",
+  "https://capy.town",
+  "https://cms.capy.town",
+  "https://know.capy.town",
+  "https://storage.capy.town",
 ]);
 
-if (NODE_ENV === 'development') {
-  ALLOWED_ORIGINS.add('http://localhost:4321');
+if (NODE_ENV === "development") {
+  ALLOWED_ORIGINS.add("http://localhost:4321");
 }
 
 export const ALL: APIRoute = async (context) => {
   const req = context.request;
-  const origin = req.headers.get('origin') || '';
+  const origin = req.headers.get("origin") || "";
   const isAllowed = origin && ALLOWED_ORIGINS.has(origin);
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     // Preflight
     const headers = new Headers();
     if (isAllowed) {
-      headers.set('Access-Control-Allow-Origin', origin);
-      headers.set('Vary', 'Origin');
-      headers.set('Access-Control-Allow-Credentials', 'true');
+      headers.set("Access-Control-Allow-Origin", origin);
+      headers.set("Vary", "Origin");
+      headers.set("Access-Control-Allow-Credentials", "true");
     }
-    headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    headers.set(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Requested-With",
+    );
     return new Response(null, { status: 204, headers });
   }
 
@@ -38,8 +48,8 @@ export const ALL: APIRoute = async (context) => {
 
   // Attach CORS headers to regular responses
   const headers = new Headers(res.headers);
-  headers.set('Access-Control-Allow-Origin', origin);
-  headers.set('Vary', 'Origin');
-  headers.set('Access-Control-Allow-Credentials', 'true');
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Vary", "Origin");
+  headers.set("Access-Control-Allow-Credentials", "true");
   return new Response(res.body, { status: res.status, headers });
 };

@@ -27,8 +27,11 @@ export const POST: APIRoute = async ({ params, request }) => {
   let authorized = false;
 
   // 1. Check Bearer Token (Service Principal)
-  if (internalSecret && authHeader === `Bearer ${internalSecret}`) {
-    authorized = true;
+  if (internalSecret && authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    if (token === internalSecret) {
+      authorized = true;
+    }
   }
 
   // 2. Check API Key (if not already authorized)

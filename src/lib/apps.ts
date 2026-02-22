@@ -1,4 +1,4 @@
-export type AppId = 'capyschool' | 'cms-ai';
+export type AppId = "capyschool" | "cms-ai";
 
 export interface AppConfig {
   id: AppId;
@@ -9,30 +9,36 @@ export interface AppConfig {
 }
 
 export const APPS: Record<AppId, AppConfig> = {
-  'capyschool': {
-    id: 'capyschool',
-    name: 'CapySchool',
-    description: 'Learning platform for students and educators.',
+  capyschool: {
+    id: "capyschool",
+    name: "CapySchool",
+    description: "Learning platform for students and educators.",
     validBases: [
-      'http://localhost:5174',
-      'http://localhost:4321',
-      'http://localhost:4322',
-      'https://capyschool.com',
-      'https://www.capyschool.com',
-      'https://auth.capyschool.com',
-      'https://cms.capyschool.com',
+      "http://localhost:5174",
+      "http://localhost:4321",
+      "http://localhost:4322",
+      "https://capyschool.com",
+      "https://www.capyschool.com",
+      "https://auth.capyschool.com",
+      "https://auth.capy.town",
+      "https://know.capy.town",
+      "https://storage.capy.town",
+      "https://capy.town",
     ],
   },
-  'cms-ai': {
-    id: 'cms-ai',
-    name: 'CMS-AI',
-    description: 'AI-assisted content management system.',
+  "cms-ai": {
+    id: "cms-ai",
+    name: "CMS-AI",
+    description: "AI-assisted content management system.",
     validBases: [
-      'http://localhost:5174',
-      'http://localhost:4321',
-      'http://localhost:4322',
-      'https://auth.capyschool.com',
-      'https://cms.capyschool.com',
+      "http://localhost:5174",
+      "http://localhost:4321",
+      "http://localhost:4322",
+      "https://auth.capyschool.com",
+      "https://auth.capy.town",
+      "https://capy.town",
+      "https://know.capy.town",
+      "https://storage.capy.town",
     ],
   },
 };

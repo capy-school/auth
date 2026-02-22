@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import {
   apiKey,
   magicLink,
+  oneTimeToken,
   oAuthProxy,
   twoFactor,
   organization,
@@ -16,6 +17,54 @@ import { sendEmail } from "./email";
 function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
 }
+
+function getEnvList(key: string) {
+  const raw = getEnv(key, "");
+  return raw
+    .split(",")
+    .map((value: string) => value.trim())
+    .filter(Boolean);
+}
+
+const authBaseURL = getEnv("AUTH_BASE_URL", "http://localhost:4321");
+const authBaseHostname = (() => {
+  try {
+    return new URL(authBaseURL).hostname;
+  } catch {
+    return "localhost";
+  }
+})();
+
+const configuredCookieDomains = getEnvList("AUTH_COOKIE_DOMAINS");
+const explicitCookieDomain = getEnv("AUTH_COOKIE_DOMAIN", "").trim();
+const inferredCookieDomain = authBaseURL.includes("capyschool.com")
+  ? "capyschool.com"
+  : authBaseURL.includes("capy.town")
+    ? "capy.town"
+    : "";
+
+const cookieDomain =
+  explicitCookieDomain ||
+  configuredCookieDomains.find(
+    (domain: string) =>
+      authBaseHostname === domain || authBaseHostname.endsWith(`.${domain}`),
+  ) ||
+  configuredCookieDomains[0] ||
+  inferredCookieDomain;
+
+const defaultTrustedOrigins = [
+  "https://auth.capyschool.com",
+  "https://capyschool.com",
+  "https://www.capyschool.com",
+  "https://cms.capyschool.com",
+  "https://auth.capy.town",
+  "https://capy.town",
+  "http://localhost:4321",
+];
+
+const trustedOrigins = Array.from(
+  new Set([...defaultTrustedOrigins, ...getEnvList("AUTH_TRUSTED_ORIGINS")]),
+);
 
 const isDevelopment =
   getEnv("NODE_ENV", "development") === "development" ||
@@ -34,7 +83,7 @@ const db = new Kysely<Database>({
 });
 
 export const auth = betterAuth({
-  baseURL: getEnv("AUTH_BASE_URL", "http://localhost:4321"),
+  baseURL: authBaseURL,
   database: {
     db: db,
     type: "sqlite",
@@ -85,28 +134,15 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    crossSubDomainCookies:
-      getEnv("AUTH_BASE_URL", "").includes("capyschool.com") ||
-      getEnv("AUTH_BASE_URL", "").includes("capy.town")
-        ? {
-            enabled: true,
-            domain: getEnv("AUTH_BASE_URL", "").includes("capyschool.com")
-              ? "capyschool.com"
-              : "capy.town",
-          }
-        : undefined,
+    crossSubDomainCookies: cookieDomain
+      ? {
+          enabled: true,
+          domain: cookieDomain,
+        }
+      : undefined,
   },
   // CORS/trusted origins: local dev + app frontends + Apple (for Sign in with Apple web flow)
-  trustedOrigins: [
-    "https://auth.capyschool.com",
-    "https://capyschool.com",
-    "https://www.capyschool.com",
-    "https://cms.capyschool.com",
-    "https://auth.capy.town",
-    "https://capy.town",
-    // local dev
-    "http://localhost:4321",
-  ],
+  trustedOrigins,
   secret: getEnv("BETTER_AUTH_SECRET"),
   plugins: [
     twoFactor(),
@@ -175,6 +211,7 @@ export const auth = betterAuth({
               timeWindow: 60, // 100 requests per 60 seconds in production
             },
     }),
+    oneTimeToken(),
     organization(),
     oAuthProxy({
       productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly
