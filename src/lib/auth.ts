@@ -213,9 +213,23 @@ export const auth = betterAuth({
     }),
     oneTimeToken(),
     organization(),
+    // oAuthProxy({
+    // productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly
+    //   currentURL: "http://localhost:4321", // Optional - if the URL isn't inferred correctly
+    // }),
+    // oauthProvider({
+    //   dynamicRegistration: {
+    //     enabled: true,
+    //   },
+    //   token: {
+    //     expiresIn: 3600, // 1 hour
+    //     refreshTokenExpiresIn: 3600 * 24 * 30, // 30 days
+    //   },
+    //   authorizePage: "/auth/authorize",
+    // }),
     oAuthProxy({
-      productionURL: "https://auth.capyschool.com", // Optional - if the URL isn't inferred correctly
-      currentURL: "http://localhost:4321", // Optional - if the URL isn't inferred correctly
+      productionURL: authBaseURL, // Optional - if the URL isn't inferred correctly
+      currentURL: authBaseURL, // Optional - if the URL isn't inferred correctly
     }),
     oidcProvider({
       loginPage: "/",

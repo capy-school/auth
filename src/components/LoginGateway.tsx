@@ -290,6 +290,10 @@ export function LoginGateway() {
         localStorage.setItem("app.id", app.id);
         localStorage.setItem("app.redirect", redirectUrl);
       }
+      const target =
+        redirectUrl && app && isRedirectAllowed(app, redirectUrl)
+          ? redirectUrl
+          : "/dashboard";
       // Built-in providers use social; generic uses oauth2
       const builtin = [
         "google",
@@ -300,9 +304,19 @@ export function LoginGateway() {
         "line",
       ];
       if (builtin.includes(provider)) {
-        await client.signIn.social({ provider });
+        await client.signIn.social({
+          provider,
+          callbackURL: target,
+          newUserCallbackURL: target,
+          errorCallbackURL: target,
+        });
       } else {
-        await client.signIn.oauth2({ providerId: provider });
+        await client.signIn.oauth2({
+          providerId: provider,
+          callbackURL: target,
+          newUserCallbackURL: target,
+          errorCallbackURL: target,
+        });
       }
     } catch (error) {
       console.error("OAuth error:", error);
