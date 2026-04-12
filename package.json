@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/build-cf.mjs",
     "preview": "astro preview",
     "cf:types": "wrangler types",
     "deploy": "wrangler deploy",
