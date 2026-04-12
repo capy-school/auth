@@ -6,13 +6,15 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "cf:types": "wrangler types",
+    "deploy": "wrangler deploy",
     "astro": "astro",
     "db:generate": "@better-auth/cli generate",
     "db:migrate": "@better-auth/cli migrate",
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
-    "@astrojs/vercel": "^9.0.0",
+    "@astrojs/cloudflare": "^12.6.13",
     "@libsql/client": "^0.15.15",
     "@libsql/kysely-libsql": "^0.4.1",
     "@tailwindcss/vite": "^4.1.17",
@@ -36,6 +38,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "dotenv": "^17.2.3",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "wrangler": "^4.81.1"
   }
 }
