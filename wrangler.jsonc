@@ -4,6 +4,22 @@
   "main": "./dist/_worker.js/index.js",
   "compatibility_date": "2026-04-12",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "NODE_ENV": "production",
+    "AUTH_URL": "https://auth.capy.town",
+    "BETTER_AUTH_URL": "https://auth.capy.town",
+    "SSO_ALLOWED_REDIRECT_ORIGINS": "https://know.capy.town,https://auth.capy.town,https://capy.town,https://cms.capy.town,https://auth.capyschool.com,https://capyschool.com,https://www.capyschool.com,http://localhost:5174,http://localhost:4322",
+    "AUTH_TRUSTED_ORIGINS": "https://know.capy.town,https://auth.capy.town,https://capy.town,https://cms.capy.town,https://auth.capyschool.com,https://capyschool.com,https://www.capyschool.com",
+    "AUTH_COOKIE_DOMAINS": "capy.town,capyschool.com",
+    "PUBLIC_AUTH_URL": "https://auth.capy.town",
+    "AUTH_BASE_URL": "https://auth.capy.town",
+    "PASSKEY_RP_ID": "auth.capyschool.com",
+    "PASSKEY_RP_NAME": "CapySchool",
+    "SMTP_PORT": "587",
+    "SMTP_FROM": "noreply@yourdomain.com",
+    "ORGANIZATION_NAME": "My Company",
+    "ADMIN_EMAIL": "admin@yourdomain.com"
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist"
