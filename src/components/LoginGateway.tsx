@@ -3,7 +3,7 @@ import { Mail, KeyRound, Fingerprint, Shield, Key, Clock } from "lucide-react";
 import { AuthButton } from "./AuthButton";
 import { getApp, isRedirectAllowed, type AppConfig } from "../lib/apps";
 import { authClient } from "../lib/auth-client";
-import { LEGACY_SSO_BRIDGE_URL, isCapyTownHostname } from "../lib/sso";
+import { isCapyTownHostname } from "../lib/sso";
 
 // TypeScript definitions for WebAuthn conditional UI
 declare global {
@@ -99,42 +99,25 @@ const LineIcon = () => (
 export function LoginGateway() {
   const client = authClient;
 
-  const localCallbackURL = (target: string): string => {
+  const postLoginURL = (target: string): string => {
     try {
       const parsed = new URL(target, window.location.origin);
-      return isCapyTownHostname(parsed.hostname) ? target : "/";
+      if (isCapyTownHostname(parsed.hostname)) {
+        return parsed.origin === window.location.origin
+          ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+          : parsed.toString();
+      }
+
+      const bridgeURL = new URL("/api/sso/bridge", window.location.origin);
+      bridgeURL.searchParams.set("redirect", parsed.toString());
+      return `${bridgeURL.pathname}${bridgeURL.search}`;
     } catch {
       return "/";
     }
   };
 
   const resolvePostLoginDestination = async (target: string) => {
-    try {
-      const parsedTarget = new URL(target, window.location.origin);
-      if (isCapyTownHostname(parsedTarget.hostname)) {
-        return parsedTarget.toString();
-      }
-
-      const tokenRes = await fetch("/api/auth/one-time-token/generate", {
-        method: "GET",
-        credentials: "include",
-      });
-      if (!tokenRes.ok) {
-        return parsedTarget.toString();
-      }
-
-      const tokenData = await tokenRes.json().catch(() => null);
-      if (!tokenData?.token) {
-        return parsedTarget.toString();
-      }
-
-      const bridgeURL = new URL(LEGACY_SSO_BRIDGE_URL);
-      bridgeURL.searchParams.set("token", tokenData.token);
-      bridgeURL.searchParams.set("redirect", parsedTarget.toString());
-      return bridgeURL.toString();
-    } catch {
-      return target;
-    }
+    return postLoginURL(target);
   };
 
   const redirectAfterLogin = async (target: string) => {
@@ -267,7 +250,7 @@ export function LoginGateway() {
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const data = await res.json().catch(() => null);
-          if (data && data.user) {
+          if (data && typeof data === "object" && "user" in data && data.user) {
             const savedAppId = localStorage.getItem("app.id");
             const savedRedirect = localStorage.getItem("app.redirect");
             const appCfg = getApp(savedAppId);
@@ -304,7 +287,7 @@ export function LoginGateway() {
           ? redirectUrl
           : "/dashboard";
       // Built-in providers use social; generic uses oauth2
-      const callbackTarget = localCallbackURL(target);
+      const callbackTarget = postLoginURL(target);
       const builtin = [
         "google",
         "github",
@@ -383,7 +366,7 @@ export function LoginGateway() {
           ? redirectUrl
           : "/dashboard";
 
-      const callbackTarget = localCallbackURL(target);
+      const callbackTarget = postLoginURL(target);
       const { error } = await client.signIn.magicLink({
         email,
         callbackURL: callbackTarget,
