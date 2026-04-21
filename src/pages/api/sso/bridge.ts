@@ -20,28 +20,17 @@ export const GET: APIRoute = async ({ request, url }) => {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return Response.redirect(home, 302);
 
-  const tokenRequest = new Request(
-    new URL("/api/auth/one-time-token/generate", request.url),
-    {
-      method: "GET",
-      headers: {
-        cookie: request.headers.get("cookie") ?? "",
-        "user-agent": request.headers.get("user-agent") ?? "",
-        "x-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
-      },
-    },
-  );
+  let token: string | null = null;
+  try {
+    const result = await auth.api.generateOneTimeToken({
+      headers: request.headers,
+    });
+    token = result?.token ?? null;
+  } catch {
+    token = null;
+  }
 
-  const tokenResponse = await auth.handler(tokenRequest);
-  if (!tokenResponse.ok) return Response.redirect(redirectURL.toString(), 302);
-
-  const tokenData = await tokenResponse.json().catch(() => null);
-  const token =
-    tokenData && typeof tokenData === "object" && "token" in tokenData
-      ? tokenData.token
-      : null;
-
-  if (typeof token !== "string" || !token) {
+  if (typeof token !== "string" || token.length === 0) {
     return Response.redirect(redirectURL.toString(), 302);
   }
 

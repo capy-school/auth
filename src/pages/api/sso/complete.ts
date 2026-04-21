@@ -1,4 +1,6 @@
 import type { APIRoute } from "astro";
+import { serializeCookie, serializeSignedCookie } from "better-call";
+import { setSessionCookie } from "better-auth/cookies";
 import { auth } from "../../../lib/auth";
 import { isSSORedirectAllowed } from "../../../lib/sso";
 
@@ -23,6 +25,18 @@ function rewriteCookieDomain(setCookie: string, domain: string) {
   return `${setCookie}; Domain=${domain}`;
 }
 
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(body ? JSON.stringify(body) : null, {
+    status: init?.status,
+    headers: {
+      "content-type": "application/json",
+      ...(init?.headers instanceof Headers
+        ? Object.fromEntries(init.headers.entries())
+        : init?.headers ?? {}),
+    },
+  });
+}
+
 export const GET: APIRoute = async ({ request, url }) => {
   const token = url.searchParams.get("token");
   const redirect = url.searchParams.get("redirect");
@@ -42,24 +56,20 @@ export const GET: APIRoute = async ({ request, url }) => {
     return new Response("Redirect URL is not allowed", { status: 400 });
   }
 
-  const verifyRequest = new Request(
-    new URL("/api/auth/one-time-token/verify", request.url),
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        cookie: request.headers.get("cookie") ?? "",
-        "user-agent": request.headers.get("user-agent") ?? "",
-        "x-forwarded-for": request.headers.get("x-forwarded-for") ?? "",
-        "x-real-ip": request.headers.get("x-real-ip") ?? "",
-      },
-      body: JSON.stringify({ token }),
-    },
-  );
+  let verifiedSession:
+    | Awaited<ReturnType<typeof auth.api.verifyOneTimeToken>>
+    | null = null;
 
-  const verifyResponse = await auth.handler(verifyRequest);
+  try {
+    verifiedSession = await auth.api.verifyOneTimeToken({
+      body: { token },
+      headers: request.headers,
+    });
+  } catch {
+    verifiedSession = null;
+  }
 
-  if (!verifyResponse.ok) {
+  if (!verifiedSession) {
     return new Response("Invalid or expired SSO token", { status: 401 });
   }
 
@@ -71,27 +81,109 @@ export const GET: APIRoute = async ({ request, url }) => {
   const requestHost = new URL(request.url).hostname;
   const cookieDomain = resolveCookieDomainFromHost(requestHost);
 
-  const maybeGetSetCookie = (
-    verifyResponse.headers as Headers & { getSetCookie?: () => string[] }
-  ).getSetCookie;
+  const authContext = await auth.$context;
+  const authCookies = {
+    ...authContext.authCookies,
+    sessionToken: {
+      ...authContext.authCookies.sessionToken,
+      options: {
+        ...authContext.authCookies.sessionToken.options,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      },
+    },
+    sessionData: {
+      ...authContext.authCookies.sessionData,
+      options: {
+        ...authContext.authCookies.sessionData.options,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      },
+    },
+    dontRememberToken: {
+      ...authContext.authCookies.dontRememberToken,
+      options: {
+        ...authContext.authCookies.dontRememberToken.options,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      },
+    },
+  };
 
-  if (typeof maybeGetSetCookie === "function") {
-    const cookies = maybeGetSetCookie.call(verifyResponse.headers);
-    for (const cookie of cookies) {
-      responseHeaders.append(
-        "set-cookie",
-        cookieDomain ? rewriteCookieDomain(cookie, cookieDomain) : cookie,
-      );
-    }
-  } else {
-    const setCookie = verifyResponse.headers.get("set-cookie");
-    if (setCookie) {
-      responseHeaders.set(
-        "set-cookie",
-        cookieDomain ? rewriteCookieDomain(setCookie, cookieDomain) : setCookie,
-      );
-    }
-  }
+  const setCookie = (key: string, value: string, options?: Parameters<typeof serializeCookie>[2]) => {
+    const cookie = serializeCookie(key, value, options);
+    responseHeaders.append(
+      "set-cookie",
+      cookieDomain ? rewriteCookieDomain(cookie, cookieDomain) : cookie,
+    );
+    return cookie;
+  };
+
+  const setSigned = async (
+    key: string,
+    value: string,
+    secret: string,
+    options?: Parameters<typeof serializeSignedCookie>[3],
+  ) => {
+    const cookie = await serializeSignedCookie(key, value, secret, options);
+    responseHeaders.append(
+      "set-cookie",
+      cookieDomain ? rewriteCookieDomain(cookie, cookieDomain) : cookie,
+    );
+    return cookie;
+  };
+
+  await setSessionCookie(
+    {
+      method: request.method,
+      path: url.pathname,
+      body: undefined,
+      query: Object.fromEntries(url.searchParams.entries()),
+      params: {},
+      request,
+      headers: request.headers,
+      setHeader(key: string, value: string) {
+        responseHeaders.set(key, value);
+      },
+      getHeader(key: string) {
+        return request.headers.get(key);
+      },
+      getCookie(key: string) {
+        const cookieHeader = request.headers.get("cookie") ?? "";
+        const cookies = new Map(
+          cookieHeader
+            .split(/;\s*/)
+            .filter(Boolean)
+            .map((entry) => {
+              const index = entry.indexOf("=");
+              return index === -1
+                ? [entry, ""]
+                : [entry.slice(0, index), entry.slice(index + 1)];
+            }),
+        );
+        return cookies.get(key) ?? null;
+      },
+      async getSignedCookie() {
+        return null;
+      },
+      setCookie,
+      setSignedCookie: setSigned,
+      json: jsonResponse,
+      redirect(destination: string) {
+        return new Response(null, {
+          status: 302,
+          headers: { Location: destination },
+        }) as never;
+      },
+      error(status: number, body?: { message?: string }) {
+        return new Response(body?.message ?? "Request failed", {
+          status,
+        }) as never;
+      },
+      context: {
+        ...authContext,
+        authCookies,
+      },
+    } as unknown as Parameters<typeof setSessionCookie>[0],
+    verifiedSession,
+  );
 
   return new Response(null, {
     status: 302,
