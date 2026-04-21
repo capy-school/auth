@@ -99,6 +99,15 @@ const LineIcon = () => (
 export function LoginGateway() {
   const client = authClient;
 
+  const localCallbackURL = (target: string): string => {
+    try {
+      const parsed = new URL(target, window.location.origin);
+      return isCapyTownHostname(parsed.hostname) ? target : "/";
+    } catch {
+      return "/";
+    }
+  };
+
   const resolvePostLoginDestination = async (target: string) => {
     try {
       const parsedTarget = new URL(target, window.location.origin);
@@ -295,6 +304,7 @@ export function LoginGateway() {
           ? redirectUrl
           : "/dashboard";
       // Built-in providers use social; generic uses oauth2
+      const callbackTarget = localCallbackURL(target);
       const builtin = [
         "google",
         "github",
@@ -306,16 +316,16 @@ export function LoginGateway() {
       if (builtin.includes(provider)) {
         await client.signIn.social({
           provider,
-          callbackURL: target,
-          newUserCallbackURL: target,
-          errorCallbackURL: target,
+          callbackURL: callbackTarget,
+          newUserCallbackURL: callbackTarget,
+          errorCallbackURL: callbackTarget,
         });
       } else {
         await client.signIn.oauth2({
           providerId: provider,
-          callbackURL: target,
-          newUserCallbackURL: target,
-          errorCallbackURL: target,
+          callbackURL: callbackTarget,
+          newUserCallbackURL: callbackTarget,
+          errorCallbackURL: callbackTarget,
         });
       }
     } catch (error) {
@@ -373,11 +383,12 @@ export function LoginGateway() {
           ? redirectUrl
           : "/dashboard";
 
+      const callbackTarget = localCallbackURL(target);
       const { error } = await client.signIn.magicLink({
         email,
-        callbackURL: target,
-        newUserCallbackURL: target,
-        errorCallbackURL: target,
+        callbackURL: callbackTarget,
+        newUserCallbackURL: callbackTarget,
+        errorCallbackURL: callbackTarget,
       });
       if (!error) {
         alert("Magic link sent. Check your email.");

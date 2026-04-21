@@ -26,5 +26,10 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "preview_urls": true,
+  "routes": [
+    { "pattern": "auth.capy.town", "custom_domain": true },
+    { "pattern": "auth.capyschool.com", "custom_domain": true }
+  ]
 }
