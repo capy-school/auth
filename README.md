@@ -163,6 +163,34 @@ Visit `http://localhost:4321` to see the login gateway.
 | `bun preview` | Preview production build |
 | `bun run db:migrate` | Run database migrations |
 
+## Non-default SvelteKit diagnostic candidate
+
+Astro remains the default application and the sole production target. The additive
+`src/kit/` candidate exposes only `/__migration` and `/__migration/health`.
+It has no authentication, API proxy, database access or login implementation.
+**Do not deploy the candidate** or use it as evidence of authentication parity.
+
+```bash
+bun run kit:test
+bun run kit:check
+bun run kit:build
+bun run kit:dev --host 127.0.0.1 --port 5173 --strictPort
+# In another terminal while that server is running:
+KIT_SMOKE_URL=http://127.0.0.1:5173 node --test tests/kit-http.test.mjs
+```
+
+HTTP checks fail rather than skip when `KIT_SMOKE_URL` is absent. The candidate
+uses pinned SvelteKit 2 / Svelte 5 tooling, reuses `public/`, and checks only its own
+sources through `tsconfig.sveltekit.json`. Kit may warn that the root tsconfig does
+not extend its generated config; that root intentionally remains Astro-owned.
+
+`wrangler.sveltekit.jsonc` is separate from production configuration, with no
+custom domains, production routes, secrets or data bindings. The adapter writes
+`.svelte-kit/cloudflare/_worker.js` and assets in `.svelte-kit/cloudflare/`; generated
+output is ignored. Development binding emulation is disabled, and Kit/Vite discover
+environment files only under `src/kit/`, not the root authentication environment.
+No candidate deployment command is provided. Existing Astro commands are unchanged.
+
 ## 🎯 Usage Examples
 
 ### Client-Side Authentication
