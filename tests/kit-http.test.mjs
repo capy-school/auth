@@ -23,20 +23,24 @@ test('diagnostic HTML identifies the incomplete non-default candidate', async ()
   assert.doesNotMatch(html, /<form\b/);
 });
 
-test('OAuth preview serves disconnected presentation without cookies or success claims', async () => {
+test('login preview serves collapsed email and all providers without cookies or success claims', async () => {
   const response = await request('/__migration/login');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
   const html = await response.text();
   assert.match(html, /name="robots" content="noindex"/);
-  assert.match(html, /OAuth presentation preview only — authentication is not connected\./);
-  const controls = [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)];
-  assert.equal(controls.length, 6);
-  for (const [index, label] of ['Google', 'GitHub', 'Microsoft', 'Kakao', 'Naver', 'Line'].entries()) {
-    assert.match(controls[index][1], new RegExp(label));
+  assert.match(html, /Login presentation preview only — authentication is not connected\./);
+  const controls = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
+  assert.equal(controls.length, 7);
+  const labels = ['Sign in with Email', 'Google', 'GitHub', 'Microsoft', 'Kakao', 'Naver', 'Line'];
+  const visibleLabel = (content) => content.replace(/<svg\b[\s\S]*?<\/svg>/g, '').replace(/<[^>]*>/g, '').trim();
+  assert.deepEqual(controls.map(([, , content]) => visibleLabel(content)), labels);
+  for (const [, attributes] of controls) {
+    assert.match(attributes, /type="button"/);
+    assert.doesNotMatch(attributes, /\bdisabled\b/);
   }
-  assert.doesNotMatch(html, /2FA Protected|login success|signed in/i);
+  assert.doesNotMatch(html, /<input\b|<form\b|code sent|link sent|2FA Protected|login success|signed in/i);
 });
 
 test('dev serves the shared stylesheet imported by the login client module', async () => {

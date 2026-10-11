@@ -27,6 +27,7 @@ let server;
 let render;
 let Composition;
 let Preview;
+let EmailSignIn;
 before(async () => {
   server = await createServer({
     configFile: false,
@@ -47,6 +48,7 @@ before(async () => {
   render = (await server.ssrLoadModule('svelte/server')).render;
   Composition = (await server.ssrLoadModule('virtual:kit-login')).default;
   Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/login/+page.svelte')).default;
+  EmailSignIn = (await server.ssrLoadModule('/src/kit/lib/login/EmailSignIn.svelte')).default;
 });
 after(async () => { await server?.close(); });
 const body = (props = {}) => render(Composition, { props }).body;
@@ -105,10 +107,106 @@ test('AuthButton renders child and icon snippets with explicit and missing-handl
   }
 });
 
-test('preview is noindex and clearly disconnected without a success claim', () => {
+const emailCallbacks = { onRevealEmail() {}, onEmailChange() {}, onMagicLink() {}, onEmailOTP() {} };
+const emailBody = (props = {}) => render(EmailSignIn, { props: {
+  email: '', showEmailInput: false, ...props,
+} }).body;
+const controlLabels = (html) => buttons(html).map(([, , content]) => content
+  .replace(/<svg\b[\s\S]*?<\/svg>/g, '').replace(/<[^>]*>/g, '').trim());
+const assertEditable = (html) => {
+  const input = html.match(/<input\b[^>]*>/)?.[0];
+  assert.ok(input, 'expanded email input exists');
+  assert.doesNotMatch(input, /\bdisabled\b|\breadonly\b/);
+};
+
+test('collapsed email renders only the original disclosure label, style and Mail icon', () => {
+  const html = emailBody(emailCallbacks);
+  assert.deepEqual(controlLabels(html), ['Sign in with Email']);
+  assert.match(html, /Passwordless/);
+  assert.match(buttons(html)[0][1], /type="button"/);
+  assert.doesNotMatch(buttons(html)[0][1], /\bdisabled\b/);
+  assert.match(html, /from-purple-500 to-purple-600/);
+  assert.match(html, /aria-hidden="true" class="auth-icon w-4 h-4 shrink-0"/);
+  assert.match(html, /m22 7-8\.991 5\.727/);
+  assert.doesNotMatch(html, /<input\b|Magic Link|Email OTP|<form\b/);
+});
+
+test('errors or a missing reveal callback natively disable email disclosure', () => {
+  for (const props of [{}, { ...emailCallbacks, errors: ['Missing app'] }]) {
+    const html = emailBody(props);
+    assert.match(buttons(html)[0][1], /\bdisabled\b/);
+    assert.match(buttons(html)[0][1], /opacity-50 pointer-events-none/);
+    assert.doesNotMatch(html, /<input\b/);
+  }
+});
+
+test('expanded email preserves the raw address, input attributes and original method presentation', () => {
+  const html = emailBody({ ...emailCallbacks, showEmailInput: true, email: '  Fixture+Tag@Example.invalid  ' });
+  assertEditable(html);
+  assert.match(html, /type="email"/);
+  assert.match(html, /aria-label="Email address"/);
+  assert.match(html, /placeholder="Enter your email"/);
+  assert.match(html, /autocomplete="email webauthn"/);
+  assert.match(html, /value="  Fixture\+Tag@Example\.invalid  "/);
+  assert.match(html, /bg-gray-700\/50 border border-gray-600/);
+  assert.match(html, /focus:ring-purple-500/);
+  assert.deepEqual(controlLabels(html), ['Magic Link', 'Email OTP']);
+  for (const [, attributes, content] of buttons(html)) {
+    assert.match(attributes, /type="button"/);
+    assert.doesNotMatch(attributes, /\bdisabled\b/);
+    assert.match(content, /aria-hidden="true"/);
+  }
+  assert.match(html, /bg-purple-600 hover:bg-purple-700/);
+  assert.match(html, /bg-indigo-600 hover:bg-indigo-700/);
+  assert.match(html, /m21 2-9\.6 9\.6/);
+  assert.match(html, /M2\.586 17\.414/);
+  assert.doesNotMatch(html, /Sign in with Email|<form\b/);
+});
+
+test('visible OTP explicitly warns that email service and Better Auth plugin configuration is required', () => {
+  const html = emailBody({ ...emailCallbacks, showEmailInput: true });
+  assert.match(html, /Email OTP feature - Configure email service and Better Auth plugin/);
+  assert.doesNotMatch(html, /code sent|link sent|login success|signed in/i);
+});
+
+test('caller can model expanded local presentation with OTP hidden and no policy dependency', () => {
+  const html = emailBody({ ...emailCallbacks, showEmailInput: true, showOTP: false });
+  assertEditable(html);
+  assert.deepEqual(controlLabels(html), ['Magic Link']);
+  assert.doesNotMatch(html, /Sign in with Email|Email OTP|Configure email service|<a\b/);
+});
+
+test('expanded errors disable both methods but leave the raw input editable', () => {
+  const html = emailBody({ ...emailCallbacks, email: '<invalid>', showEmailInput: true, errors: ['Missing app'] });
+  assertEditable(html);
+  assert.match(html, /value="&lt;invalid(?:>|&gt;)"/);
+  assert.equal(buttons(html).length, 2);
+  for (const [, attributes] of buttons(html)) {
+    assert.match(attributes, /\bdisabled\b/);
+    assert.match(attributes, /opacity-50 cursor-not-allowed/);
+  }
+});
+
+test('missing method callbacks disable only the relevant buttons, never the input', () => {
+  for (const [callbacks, disabled] of [
+    [{}, [true, true]],
+    [{ onMagicLink() {} }, [false, true]],
+    [{ onEmailOTP() {} }, [true, false]],
+    [emailCallbacks, [false, false]],
+  ]) {
+    const html = emailBody({ ...callbacks, showEmailInput: true, email: '' });
+    assertEditable(html);
+    assert.deepEqual(buttons(html).map(([, attributes]) => /\bdisabled\b/.test(attributes)), disabled);
+    assert.doesNotMatch(html, /<form\b/);
+  }
+});
+
+// SSR proves rendered states only; independent Chrome acceptance covers callback/keyboard wiring.
+test('preview adds collapsed email disclosure while remaining noindex and disconnected', () => {
   const { body: html, head } = render(Preview);
   assert.match(head, /name="robots" content="noindex"/);
-  assert.match(html, /OAuth presentation preview only — authentication is not connected\./);
-  assert.equal(buttons(html).length, 6);
-  assert.doesNotMatch(html, /2FA Protected|login success|signed in/i);
+  assert.match(html, /Sign in with Email/);
+  assert.match(html, /Login presentation preview only — authentication is not connected\./);
+  assert.equal(buttons(html).length, 7);
+  assert.doesNotMatch(html, /<input\b|<form\b|2FA Protected|login success|signed in/i);
 });
