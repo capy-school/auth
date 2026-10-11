@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import AuthButton from './AuthButton.svelte';
 
   interface Props {
@@ -6,13 +7,14 @@
     showEmailInput: boolean;
     errors?: readonly string[];
     showOTP?: boolean;
+    beforeEmail?: Snippet;
     onRevealEmail?: () => void;
     onEmailChange?: (value: string) => void;
     onMagicLink?: (email: string) => void;
     onEmailOTP?: (email: string) => void;
   }
   let {
-    email, showEmailInput, errors = [], showOTP = true,
+    email, showEmailInput, errors = [], showOTP = true, beforeEmail,
     onRevealEmail, onEmailChange, onMagicLink, onEmailOTP,
   }: Props = $props();
 </script>
@@ -21,6 +23,7 @@
   <div class="flex items-center justify-between mb-2">
     <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Passwordless</h2>
   </div>
+  {@render beforeEmail?.()}
 
   {#if !showEmailInput}
     <AuthButton provider="email" disabled={errors.length > 0} onclick={onRevealEmail}>

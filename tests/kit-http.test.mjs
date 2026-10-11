@@ -23,7 +23,7 @@ test('diagnostic HTML identifies the incomplete non-default candidate', async ()
   assert.doesNotMatch(html, /<form\b/);
 });
 
-test('login preview serves collapsed email and all providers without cookies or success claims', async () => {
+test('login preview serves passkey, collapsed email and all providers without cookies or success claims', async () => {
   const response = await request('/__migration/login');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
@@ -32,15 +32,19 @@ test('login preview serves collapsed email and all providers without cookies or 
   assert.match(html, /name="robots" content="noindex"/);
   assert.match(html, /Login presentation preview only — authentication is not connected\./);
   const controls = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
-  assert.equal(controls.length, 7);
-  const labels = ['Sign in with Email', 'Google', 'GitHub', 'Microsoft', 'Kakao', 'Naver', 'Line'];
+  assert.equal(controls.length, 8);
+  const labels = ['Sign in with Passkey', 'Sign in with Email', 'Google', 'GitHub', 'Microsoft', 'Kakao', 'Naver', 'Line'];
   const visibleLabel = (content) => content.replace(/<svg\b[\s\S]*?<\/svg>/g, '').replace(/<[^>]*>/g, '').trim();
   assert.deepEqual(controls.map(([, , content]) => visibleLabel(content)), labels);
   for (const [, attributes] of controls) {
     assert.match(attributes, /type="button"/);
     assert.doesNotMatch(attributes, /\bdisabled\b/);
   }
-  assert.doesNotMatch(html, /<input\b|<form\b|code sent|link sent|2FA Protected|login success|signed in/i);
+  assert.equal([...html.matchAll(/<h2\b[^>]*>Passwordless<\/h2>/g)].length, 1);
+  assert.ok(html.indexOf('Passwordless') < html.indexOf('Sign in with Passkey'));
+  assert.match(controls[0][1], /from-indigo-500 to-indigo-600/);
+  assert.match(controls[0][2], /M12 10a2 2 0 0 0-2 2c0 1\.02/);
+  assert.doesNotMatch(html, /<input\b|<form\b|role="status"|Passkey requested|code sent|link sent|2FA Protected|login success|signed in/i);
 });
 
 test('dev serves the shared stylesheet imported by the login client module', async () => {

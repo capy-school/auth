@@ -3,6 +3,7 @@
   import LoginShell from '$lib/login/LoginShell.svelte';
   import OAuthProviders, { type OAuthProvider } from '$lib/login/OAuthProviders.svelte';
   import EmailSignIn from '$lib/login/EmailSignIn.svelte';
+  import PasskeySignIn from '$lib/login/PasskeySignIn.svelte';
 
   let email = $state('');
   let showEmailInput = $state(false);
@@ -10,6 +11,7 @@
   const onProvider = (provider: OAuthProvider) => { selected = `${provider} selected`; };
   const onMagicLink = (address: string) => { selected = `Magic Link requested for ${address}`; };
   const onEmailOTP = (address: string) => { selected = `Email OTP requested for ${address}`; };
+  const onPasskey = () => { selected = 'Passkey requested'; };
 </script>
 
 <svelte:head>
@@ -20,8 +22,12 @@
 <main class="min-h-screen text-gray-100 antialiased animated-gradient">
   <div class="container mx-auto px-4 py-8">
     <p class="text-center text-sm text-gray-300">Login presentation preview only — authentication is not connected.</p>
+    {#snippet beforeEmail()}
+      <PasskeySignIn showPasskey={true} {onPasskey} />
+    {/snippet}
     <LoginShell>
       <EmailSignIn
+        {beforeEmail}
         {email}
         {showEmailInput}
         showOTP={true}

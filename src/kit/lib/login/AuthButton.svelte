@@ -3,14 +3,14 @@
   import type { OAuthProvider } from './OAuthProviders.svelte';
 
   interface Props {
-    provider: OAuthProvider | 'email';
+    provider: OAuthProvider | 'email' | 'passkey';
     onclick?: () => void;
     disabled?: boolean;
     icon?: Snippet;
     children: Snippet;
   }
   let { provider, onclick, disabled = false, icon, children }: Props = $props();
-  const providerStyles: Record<OAuthProvider | 'email', string> = {
+  const providerStyles: Record<OAuthProvider | 'email' | 'passkey', string> = {
     google: 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white',
     github: 'bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white',
     microsoft: 'bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white',
@@ -18,6 +18,7 @@
     naver: 'bg-gradient-to-br from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white',
     line: 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white',
     email: 'bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white',
+    passkey: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white',
   };
 </script>
 

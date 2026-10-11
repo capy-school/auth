@@ -10,13 +10,26 @@ const fixture = `
   import LoginShell from '../src/kit/lib/login/LoginShell.svelte';
   import OAuthProviders from '../src/kit/lib/login/OAuthProviders.svelte';
   import AuthButton from '../src/kit/lib/login/AuthButton.svelte';
-  let { errors = [], appSummary, onProvider, button = false, disabled = false } = $props();
+  import EmailSignIn from '../src/kit/lib/login/EmailSignIn.svelte';
+  import PasskeySignIn from '../src/kit/lib/login/PasskeySignIn.svelte';
+  let {
+    errors = [], appSummary, onProvider, button = false, disabled = false,
+    passwordless = false, email = '', showEmailInput = false, showOTP = true,
+    showPasskey = true, onPasskey,
+  } = $props();
 </script>
 {#if button}
   <AuthButton provider="google" onclick={onProvider} {disabled}>
     {#snippet icon()}<svg><path d="M0 0" /></svg>{/snippet}
     Button label
   </AuthButton>
+{:else if passwordless}
+  <EmailSignIn {email} {showEmailInput} {showOTP} {errors}
+    onRevealEmail={() => {}} onEmailChange={() => {}} onMagicLink={() => {}} onEmailOTP={() => {}}>
+    {#snippet beforeEmail()}
+      <PasskeySignIn {showPasskey} {errors} {onPasskey} />
+    {/snippet}
+  </EmailSignIn>
 {:else}
   <LoginShell {errors} {appSummary}>
     <OAuthProviders {errors} {onProvider} />
@@ -28,6 +41,7 @@ let render;
 let Composition;
 let Preview;
 let EmailSignIn;
+let PasskeySignIn;
 before(async () => {
   server = await createServer({
     configFile: false,
@@ -49,6 +63,7 @@ before(async () => {
   Composition = (await server.ssrLoadModule('virtual:kit-login')).default;
   Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/login/+page.svelte')).default;
   EmailSignIn = (await server.ssrLoadModule('/src/kit/lib/login/EmailSignIn.svelte')).default;
+  PasskeySignIn = (await server.ssrLoadModule('/src/kit/lib/login/PasskeySignIn.svelte')).default;
 });
 after(async () => { await server?.close(); });
 const body = (props = {}) => render(Composition, { props }).body;
@@ -201,12 +216,93 @@ test('missing method callbacks disable only the relevant buttons, never the inpu
   }
 });
 
+const passkeyBody = (props = {}) => render(PasskeySignIn, { props: { showPasskey: true, ...props } }).body;
+
+test('visible passkey renders an enabled native button with original label, fingerprint and indigo style', () => {
+  let requests = 0;
+  const html = passkeyBody({ errors: Object.freeze([]), onPasskey: () => { requests += 1; } });
+  assert.deepEqual(controlLabels(html), ['Sign in with Passkey']);
+  const [, attributes, content] = buttons(html)[0];
+  assert.match(attributes, /type="button"/);
+  assert.doesNotMatch(attributes, /\bdisabled\b|opacity-50|pointer-events-none/);
+  assert.match(attributes, /bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white/);
+  assert.match(content, /aria-hidden="true" class="auth-icon w-4 h-4 shrink-0"/);
+  assert.match(content, /viewBox="0 0 24 24"/);
+  assert.match(content, /fill="none" stroke="currentColor" stroke-width="2"/);
+  assert.match(content, /stroke-linecap="round" stroke-linejoin="round"/);
+  const fingerprintPaths = [
+    'M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4',
+    'M14 13.12c0 2.38 0 6.38-1 8.88',
+    'M17.29 21.02c.12-.6.43-2.3.5-3.02',
+    'M2 12a10 10 0 0 1 18-6',
+    'M2 16h.01',
+    'M21.8 16c.2-2 .131-5.354 0-6',
+    'M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2',
+    'M8.65 22c.21-.66.45-1.32.57-2',
+    'M9 6.8a6 6 0 0 1 9 5.2v2',
+  ];
+  assert.equal([...content.matchAll(/<path\b/g)].length, fingerprintPaths.length);
+  for (const path of fingerprintPaths) assert.ok(content.includes(`d="${path}"`));
+  assert.equal(requests, 0, 'SSR renders without invoking presentation callbacks');
+  assert.doesNotMatch(html, /Passwordless|<input\b|<form\b|<a\b/);
+});
+
+test('caller hiding passkey renders nothing even with errors or an available callback', () => {
+  for (const props of [{}, { onPasskey() {} }, { errors: Object.freeze(['Missing app']) }]) {
+    const html = passkeyBody({ ...props, showPasskey: false });
+    assert.equal(html.replace(/<!--[\s\S]*?-->/g, '').trim(), '');
+  }
+});
+
+test('errors or missing passkey callback natively disable without mutating caller data', () => {
+  for (const props of [{}, { onPasskey() {}, errors: Object.freeze(['Missing app']) }]) {
+    const html = passkeyBody(props);
+    assert.deepEqual(controlLabels(html), ['Sign in with Passkey']);
+    assert.match(buttons(html)[0][1], /\bdisabled\b/);
+    assert.match(buttons(html)[0][1], /opacity-50 pointer-events-none/);
+    assert.doesNotMatch(html, /Missing app/);
+    if (props.errors) assert.deepEqual(props.errors, ['Missing app']);
+  }
+});
+
+test('collapsed and expanded snippets preserve one Passwordless heading followed by passkey then email', () => {
+  for (const showEmailInput of [false, true]) {
+    const html = body({ passwordless: true, showEmailInput, onPasskey() {} });
+    assert.equal([...html.matchAll(/<h2\b[^>]*>Passwordless<\/h2>/g)].length, 1);
+    assert.ok(html.indexOf('Passwordless') < html.indexOf('Sign in with Passkey'));
+    assert.ok(html.indexOf('Sign in with Passkey') < html.indexOf(showEmailInput ? '<input' : 'Sign in with Email'));
+    assert.deepEqual(controlLabels(html), ['Sign in with Passkey', ...(showEmailInput
+      ? ['Magic Link', 'Email OTP'] : ['Sign in with Email'])]);
+    if (showEmailInput) {
+      assertEditable(html);
+      assert.match(html, /Email OTP feature - Configure email service and Better Auth plugin/);
+    }
+  }
+});
+
+test('caller can hide passkey in expanded local composition and errors still disable every method', () => {
+  const local = body({ passwordless: true, showEmailInput: true, showPasskey: false, showOTP: false });
+  assertEditable(local);
+  assert.deepEqual(controlLabels(local), ['Magic Link']);
+  assert.doesNotMatch(local, /Sign in with Passkey|Email OTP/);
+  for (const showEmailInput of [false, true]) {
+    const html = body({ passwordless: true, showEmailInput, onPasskey() {}, errors: ['Missing app'] });
+    for (const [, attributes] of buttons(html)) assert.match(attributes, /\bdisabled\b/);
+    if (showEmailInput) assertEditable(html);
+  }
+});
+
 // SSR proves rendered states only; independent Chrome acceptance covers callback/keyboard wiring.
-test('preview adds collapsed email disclosure while remaining noindex and disconnected', () => {
+test('preview renders eight ordered controls while remaining noindex and disconnected', () => {
   const { body: html, head } = render(Preview);
   assert.match(head, /name="robots" content="noindex"/);
-  assert.match(html, /Sign in with Email/);
   assert.match(html, /Login presentation preview only — authentication is not connected\./);
-  assert.equal(buttons(html).length, 7);
-  assert.doesNotMatch(html, /<input\b|<form\b|2FA Protected|login success|signed in/i);
+  assert.deepEqual(controlLabels(html), ['Sign in with Passkey', 'Sign in with Email', ...labels]);
+  for (const [, attributes] of buttons(html)) {
+    assert.match(attributes, /type="button"/);
+    assert.doesNotMatch(attributes, /\bdisabled\b/);
+  }
+  assert.equal([...html.matchAll(/<h2\b[^>]*>Passwordless<\/h2>/g)].length, 1);
+  assert.ok(html.indexOf('Passwordless') < html.indexOf('Sign in with Passkey'));
+  assert.doesNotMatch(html, /<input\b|<form\b|role="status"|Passkey requested|2FA Protected|login success|signed in/i);
 });
