@@ -23,6 +23,36 @@ test('diagnostic HTML identifies the incomplete non-default candidate', async ()
   assert.doesNotMatch(html, /<form\b/);
 });
 
+test('OAuth preview serves disconnected presentation without cookies or success claims', async () => {
+  const response = await request('/__migration/login');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  assert.equal(response.headers.get('set-cookie'), null);
+  const html = await response.text();
+  assert.match(html, /name="robots" content="noindex"/);
+  assert.match(html, /OAuth presentation preview only — authentication is not connected\./);
+  const controls = [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)];
+  assert.equal(controls.length, 6);
+  for (const [index, label] of ['Google', 'GitHub', 'Microsoft', 'Kakao', 'Naver', 'Line'].entries()) {
+    assert.match(controls[index][1], new RegExp(label));
+  }
+  assert.doesNotMatch(html, /2FA Protected|login success|signed in/i);
+});
+
+test('dev serves the shared stylesheet imported by the login client module', async () => {
+  const response = await request('/src/styles/global.css');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/(css|javascript)/);
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.match(await response.text(), /\.auth-icon/);
+});
+
+test('dev still blocks unrelated application source outside the candidate', async () => {
+  const response = await request('/src/lib/utils.ts');
+  assert.equal(response.status, 403);
+  await response.body?.cancel();
+});
+
 test('server health returns only a non-sensitive marker without cookies', async () => {
   const response = await request('/__migration/health');
   assert.equal(response.status, 200);
@@ -36,8 +66,10 @@ test('server health returns only a non-sensitive marker without cookies', async 
   });
 });
 
-test('candidate does not expose or proxy the existing authentication API', async () => {
-  const response = await request('/api/auth/get-session');
-  assert.equal(response.status, 404);
-  assert.equal(response.headers.get('set-cookie'), null);
+test('candidate does not expose root login or proxy the existing authentication API', async () => {
+  for (const path of ['/', '/api/auth/get-session']) {
+    const response = await request(path);
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.get('set-cookie'), null);
+  }
 });

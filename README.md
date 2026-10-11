@@ -166,11 +166,16 @@ Visit `http://localhost:4321` to see the login gateway.
 ## Non-default SvelteKit diagnostic candidate
 
 Astro remains the default application and the sole production target. The additive
-`src/kit/` candidate exposes only `/__migration` and `/__migration/health`.
-It has no authentication, API proxy, database access or login implementation.
+`src/kit/` candidate exposes `/__migration`, `/__migration/health` and the
+presentation-only `/__migration/login` preview. It has no authentication, API proxy
+or database access; `/` and `/api/auth/*` remain absent. The preview preserves the
+six-provider chooser and existing styles, but selection only displays a disconnected
+preview status. Reusable components take presentation props and callbacks, not auth
+or redirect policy. Errors or missing callbacks natively disable provider buttons.
 **Do not deploy the candidate** or use it as evidence of authentication parity.
 
 ```bash
+node --test tests/kit-login.test.mjs
 bun run kit:test
 bun run kit:check
 bun run kit:build
@@ -179,6 +184,8 @@ bun run kit:dev --host 127.0.0.1 --port 5173 --strictPort
 KIT_SMOKE_URL=http://127.0.0.1:5173 node --test tests/kit-http.test.mjs
 ```
 
+Rendered-state and HTTP tests do not prove hydration, callback clicks or browser
+network isolation; those require independent browser verification before acceptance.
 HTTP checks fail rather than skip when `KIT_SMOKE_URL` is absent. The candidate
 uses pinned SvelteKit 2 / Svelte 5 tooling, reuses `public/`, and checks only its own
 sources through `tsconfig.sveltekit.json`. Kit may warn that the root tsconfig does
