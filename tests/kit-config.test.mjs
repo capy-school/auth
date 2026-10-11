@@ -165,6 +165,7 @@ test('only diagnostic and presentation routes exist and all candidate modules re
     '__migration/+page.svelte',
     '__migration/health/+server.ts',
     '__migration/login/+page.svelte',
+    '__migration/passkeys/+page.svelte',
   ]);
   const modules = readdirSync(new URL('../src/kit/', import.meta.url), { recursive: true });
   for (const path of modules.filter((path) => /\.(svelte|[cm]?[jt]s)$/.test(path))) {

@@ -47,6 +47,24 @@ test('login preview serves passkey, collapsed email and all providers without co
   assert.doesNotMatch(html, /<input\b|<form\b|role="status"|Passkey requested|code sent|link sent|2FA Protected|login success|signed in/i);
 });
 
+test('passkey management preview is noindex, fictional and disconnected without account links', async () => {
+  const response = await request('/__migration/passkeys');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  assert.equal(response.headers.get('set-cookie'), null);
+  const html = await response.text();
+  assert.match(html, /name="robots" content="noindex"/);
+  assert.match(html, /Passkey management preview only — account management is not connected\./);
+  assert.match(html, /Fictional data; requests are recorded only, never applied\./);
+  assert.match(html, /Preview fixture/);
+  for (const fixture of ['Empty', 'Populated', 'Loading', 'Error', 'Loading with rows']) {
+    assert.match(html, new RegExp(`>${fixture}<`));
+  }
+  assert.match(html, /value="My device"/);
+  assert.match(html, /No passkeys yet\./);
+  assert.doesNotMatch(html, /<a\b|<form\b|Welcome Back|2FA Protected|registration successful|passkey added/i);
+});
+
 test('dev serves the shared stylesheet imported by the login client module', async () => {
   const response = await request('/src/styles/global.css');
   assert.equal(response.status, 200);
