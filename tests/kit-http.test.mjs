@@ -65,6 +65,24 @@ test('passkey management preview is noindex, fictional and disconnected without 
   assert.doesNotMatch(html, /<a\b|<form\b|Welcome Back|2FA Protected|registration successful|passkey added/i);
 });
 
+test('API-key dialog preview is fictional, initially open and disconnected without cookies', async () => {
+  const response = await request('/__migration/api-key-dialog');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  assert.equal(response.headers.get('set-cookie'), null);
+  const html = await response.text();
+  assert.match(html, /name="robots" content="noindex"/);
+  assert.match(html, /API Key Generated/);
+  assert.match(html, /Fictional dialog fixture — no API key was generated\. Copy records a request only; nothing is copied\./);
+  assert.ok(/<code\b[^>]*>FICTIONAL-NOT-A-KEY/.test(html), 'The preview displays only a fictional fixture');
+  const controls = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
+  assert.deepEqual(controls.map(([, , content]) => content.replace(/<[^>]*>/g, '').trim()),
+    ['Reopen fictional dialog (preview only)', 'Copy', "I've saved my key"]);
+  for (const [, attributes] of controls) assert.match(attributes, /type="button"/);
+  assert.doesNotMatch(html.match(/<div id="newKeyModal"[^>]*>/)?.[0] || '', /\bhidden\b/);
+  assert.doesNotMatch(html, /Copied!|<a\b|<form\b|Welcome Back|2FA Protected|role="status"/);
+});
+
 test('dev serves the shared stylesheet imported by the login client module', async () => {
   const response = await request('/src/styles/global.css');
   assert.equal(response.status, 200);
