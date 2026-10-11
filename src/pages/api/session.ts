@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { auth } from "../../lib/auth";
+import { localAuthPolicy } from '../../lib/local-runtime';
 
 const NODE_ENV = import.meta.env.NODE_ENV || process.env.NODE_ENV;
 
@@ -16,6 +17,10 @@ const ALLOWED_ORIGINS = new Set([
 
 if (NODE_ENV === "development") {
   ALLOWED_ORIGINS.add("http://localhost:4321");
+}
+if (localAuthPolicy) {
+  ALLOWED_ORIGINS.clear();
+  for (const origin of [localAuthPolicy.authOrigin, ...localAuthPolicy.appOrigins]) ALLOWED_ORIGINS.add(origin);
 }
 
 function corsHeaders(origin: string) {

@@ -1,3 +1,4 @@
+import { localClientPolicy } from './local-client';
 export type AppId = "capyschool" | "cms-ai";
 
 export interface AppConfig {
@@ -45,6 +46,11 @@ export const APPS: Record<AppId, AppConfig> = {
   },
 };
 
+if (localClientPolicy) {
+  APPS.capyschool.validBases = [localClientPolicy.appOrigins[0]];
+  APPS['cms-ai'].validBases = [localClientPolicy.appOrigins[1]];
+}
+
 export function getApp(id?: string | null): AppConfig | null {
   if (!id) return null;
   const key = id.toLowerCase() as AppId;
@@ -54,6 +60,7 @@ export function getApp(id?: string | null): AppConfig | null {
 export function isRedirectAllowed(app: AppConfig, redirect: string): boolean {
   try {
     const url = new URL(redirect);
+    if (url.username || url.password) return false;
     // match by origin (base URL)
     return app.validBases.some((base) => {
       try {

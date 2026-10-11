@@ -3,6 +3,7 @@ import { serializeCookie, serializeSignedCookie } from "better-call";
 import { setSessionCookie } from "better-auth/cookies";
 import { auth } from "../../../lib/auth";
 import { isSSORedirectAllowed } from "../../../lib/sso";
+import { localAuthPolicy } from '../../../lib/local-runtime';
 
 function resolveCookieDomainFromHost(hostname: string) {
   if (hostname === "capy.town" || hostname.endsWith(".capy.town")) {
@@ -79,7 +80,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   });
 
   const requestHost = new URL(request.url).hostname;
-  const cookieDomain = resolveCookieDomainFromHost(requestHost);
+  const cookieDomain = localAuthPolicy ? '' : resolveCookieDomainFromHost(requestHost);
 
   const authContext = await auth.$context;
   const authCookies = {

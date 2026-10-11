@@ -29,3 +29,11 @@ pnpm-debug.log*
 
 .vercel
 .wrangler/
+.local-auth/
+
+# legacy local database and generated code index
+local.db
+local.db-shm
+local.db-wal
+local.db-journal
+.codegraph/

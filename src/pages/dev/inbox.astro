@@ -1,0 +1,23 @@
+---
+import { localAuthPolicy } from '../../lib/local-runtime';
+if (!import.meta.env.DEV || !localAuthPolicy || Astro.url.origin !== localAuthPolicy.authOrigin) {
+  return new Response('Not found', { status: 404 });
+}
+Astro.response.headers.set('Cache-Control', 'no-store');
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+Astro.response.headers.set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'");
+const { localFileInbox } = await import('../../lib/local-auth');
+const messages = localFileInbox(import.meta.env.AUTH_LOCAL_DATABASE_URL).list();
+---
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Local Auth inbox</title></head>
+  <body>
+    <h1>Local Auth inbox</h1>
+    <p>Development only. The newest 20 links expire after five minutes. Each link works once.</p>
+    <a href="/">Back to sign in</a>
+    {messages.length === 0 && <p>No active messages. Request a magic link, then refresh this page.</p>}
+    <ul>{messages.map(message => <li><a href={message.url} rel="noreferrer">Sign in as {message.email}</a></li>)}</ul>
+  </body>
+</html>

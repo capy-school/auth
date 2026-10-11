@@ -3,7 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "PORTLESS_HTTPS=0 portless auth astro dev",
+    "dev:setup": "tsx scripts/setup-local.ts",
+    "test:local": "node --import tsx --test tests/local-*.test.*",
     "build": "node scripts/build-cf.mjs",
     "preview": "astro preview",
     "cf:types": "wrangler types",

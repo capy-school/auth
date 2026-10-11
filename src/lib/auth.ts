@@ -13,6 +13,9 @@ import { Kysely } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 import { passkey } from "better-auth/plugins/passkey";
 import { sendEmail } from "./email";
+import { localAuthPolicy } from "./local-runtime";
+
+function createProductionAuth() {
 
 function getEnv(key: string, defaultValue?: string) {
   return import.meta.env[key] || process.env[key] || defaultValue;
@@ -82,7 +85,7 @@ const db = new Kysely<Database>({
   }),
 });
 
-export const auth = betterAuth({
+return betterAuth({
   baseURL: authBaseURL,
   database: {
     db: db,
@@ -241,3 +244,12 @@ export const auth = betterAuth({
     openAPI(),
   ],
 });
+}
+
+export const auth = import.meta.env.DEV && localAuthPolicy
+  ? (await (await import('./local-auth')).createLocalAuth({
+      origin: localAuthPolicy.authOrigin,
+      databaseURL: import.meta.env.AUTH_LOCAL_DATABASE_URL,
+      secret: import.meta.env.AUTH_LOCAL_SECRET,
+    })).auth as unknown as ReturnType<typeof createProductionAuth>
+  : createProductionAuth();

@@ -3,7 +3,13 @@ import { Mail, KeyRound, Fingerprint, Shield, Key, Clock } from "lucide-react";
 import { AuthButton } from "./AuthButton";
 import { getApp, isRedirectAllowed, type AppConfig } from "../lib/apps";
 import { authClient } from "../lib/auth-client";
-import { isCapyTownHostname } from "../lib/sso";
+import { postLoginDestination, magicLinkDestination, selectRedirect } from '../lib/local-policy.mjs';
+import { localClientPolicy } from '../lib/local-client';
+
+const safeStorage = {
+  getItem(key: string) { try { return window.localStorage.getItem(key); } catch { return null; } },
+  setItem(key: string, value: string) { try { window.localStorage.setItem(key, value); } catch { /* Optional persistence. */ } },
+};
 
 // TypeScript definitions for WebAuthn conditional UI
 declare global {
@@ -100,20 +106,7 @@ export function LoginGateway() {
   const client = authClient;
 
   const postLoginURL = (target: string): string => {
-    try {
-      const parsed = new URL(target, window.location.origin);
-      if (isCapyTownHostname(parsed.hostname)) {
-        return parsed.origin === window.location.origin
-          ? `${parsed.pathname}${parsed.search}${parsed.hash}`
-          : parsed.toString();
-      }
-
-      const bridgeURL = new URL("/api/sso/bridge", window.location.origin);
-      bridgeURL.searchParams.set("redirect", parsed.toString());
-      return `${bridgeURL.pathname}${bridgeURL.search}`;
-    } catch {
-      return "/";
-    }
+    return postLoginDestination(target, window.location.origin, localClientPolicy);
   };
 
   const resolvePostLoginDestination = async (target: string) => {
@@ -126,7 +119,7 @@ export function LoginGateway() {
   };
 
   const [email, setEmail] = useState("");
-  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(!!localClientPolicy);
   const [authMethod, setAuthMethod] = useState<
     "magiclink" | "otp" | "passkey" | null
   >(null);
@@ -192,8 +185,8 @@ export function LoginGateway() {
 
       if (errs.length === 0 && resolvedApp && redirect) {
         // store for post-login redirect
-        localStorage.setItem("app.id", resolvedApp.id);
-        localStorage.setItem("app.redirect", redirect);
+        safeStorage.setItem("app.id", resolvedApp.id);
+        safeStorage.setItem("app.redirect", redirect);
       }
     } catch {
       // ignore
@@ -202,6 +195,7 @@ export function LoginGateway() {
 
   // Check for conditional UI support and preload passkeys for autofill
   useEffect(() => {
+    if (localClientPolicy) return;
     (async () => {
       // Check if browser supports conditional UI
       if (
@@ -247,26 +241,15 @@ export function LoginGateway() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/auth/session");
+        const res = await fetch("/api/session");
         if (res.ok) {
           const data = await res.json().catch(() => null);
           if (data && typeof data === "object" && "user" in data && data.user) {
-            const savedAppId = localStorage.getItem("app.id");
-            const savedRedirect = localStorage.getItem("app.redirect");
-            const appCfg = getApp(savedAppId);
-            if (
-              appCfg &&
-              savedRedirect &&
-              isRedirectAllowed(appCfg, savedRedirect)
-            ) {
-              await redirectAfterLogin(savedRedirect);
-              return;
-            }
-            // If no callback URL, redirect to dashboard
-            if (!savedRedirect || !appCfg) {
-              await redirectAfterLogin("/dashboard");
-              return;
-            }
+            const target = selectRedirect(window.location.search, safeStorage, (id: string, redirect: string) => {
+              const config = getApp(id);
+              return !!config && isRedirectAllowed(config, redirect);
+            });
+            if (target) await redirectAfterLogin(target);
           }
         }
       } catch {
@@ -279,8 +262,8 @@ export function LoginGateway() {
     try {
       if (errors.length > 0) return;
       if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
-        localStorage.setItem("app.id", app.id);
-        localStorage.setItem("app.redirect", redirectUrl);
+        safeStorage.setItem("app.id", app.id);
+        safeStorage.setItem("app.redirect", redirectUrl);
       }
       const target =
         redirectUrl && app && isRedirectAllowed(app, redirectUrl)
@@ -320,8 +303,8 @@ export function LoginGateway() {
     try {
       if (errors.length > 0) return;
       if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
-        localStorage.setItem("app.id", app.id);
-        localStorage.setItem("app.redirect", redirectUrl);
+        safeStorage.setItem("app.id", app.id);
+        safeStorage.setItem("app.redirect", redirectUrl);
       }
       const target =
         redirectUrl && app && isRedirectAllowed(app, redirectUrl)
@@ -358,15 +341,15 @@ export function LoginGateway() {
     try {
       if (errors.length > 0) return;
       if (app && redirectUrl && isRedirectAllowed(app, redirectUrl)) {
-        localStorage.setItem("app.id", app.id);
-        localStorage.setItem("app.redirect", redirectUrl);
+        safeStorage.setItem("app.id", app.id);
+        safeStorage.setItem("app.redirect", redirectUrl);
       }
       const target =
         redirectUrl && app && isRedirectAllowed(app, redirectUrl)
           ? redirectUrl
           : "/dashboard";
 
-      const callbackTarget = postLoginURL(target);
+      const callbackTarget = magicLinkDestination(target, window.location.origin, localClientPolicy);
       const { error } = await client.signIn.magicLink({
         email,
         callbackURL: callbackTarget,
@@ -374,7 +357,7 @@ export function LoginGateway() {
         errorCallbackURL: callbackTarget,
       });
       if (!error) {
-        alert("Magic link sent. Check your email.");
+        alert(localClientPolicy ? 'Magic link ready. Open the local inbox.' : "Magic link sent. Check your email.");
       } else {
         console.error("Magic link error:", error);
       }
@@ -454,7 +437,7 @@ export function LoginGateway() {
             )} */}
           </div>
 
-          <AuthButton
+          {!localClientPolicy && <AuthButton
             provider="passkey"
             icon={<Fingerprint />}
             onClick={handlePasskeyLogin}
@@ -463,7 +446,7 @@ export function LoginGateway() {
             }
           >
             Sign in with Passkey
-          </AuthButton>
+          </AuthButton>}
 
           {!showEmailInput && (
             <AuthButton
@@ -482,6 +465,7 @@ export function LoginGateway() {
             <div className="space-y-2.5">
               <input
                 type="email"
+                aria-label="Email address"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -497,21 +481,22 @@ export function LoginGateway() {
                   <Key className="w-4 h-4" />
                   Magic Link
                 </button>
-                <button
+                {!localClientPolicy && <button
                   onClick={handleEmailOTP}
                   disabled={errors.length > 0}
                   className={`px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 ${errors.length ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <KeyRound className="w-4 h-4" />
                   Email OTP
-                </button>
+                </button>}
               </div>
             </div>
           )}
         </div>
 
         {/* OAuth Providers */}
-        <div className="space-y-2.5">
+        {localClientPolicy && <a href="/dev/inbox" target="_blank" rel="noreferrer" className="text-purple-300 underline">Open local inbox</a>}
+        {!localClientPolicy && <div className="space-y-2.5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
             OAuth Providers
           </h2>
@@ -583,7 +568,7 @@ export function LoginGateway() {
               Line
             </AuthButton>
           </div>
-        </div>
+        </div>}
 
         {/* Additional Info */}
         <div className="mt-6 pt-4 border-t border-gray-700">

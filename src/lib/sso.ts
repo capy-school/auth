@@ -1,4 +1,6 @@
 import { APPS } from "./apps";
+import { localAuthPolicy } from './local-runtime';
+import { isLocalTarget } from './local-policy.mjs';
 
 export const LEGACY_SSO_BRIDGE_URL =
   "https://auth.capyschool.com/api/sso/complete";
@@ -51,5 +53,6 @@ export function isCapyTownHostname(hostname: string) {
 }
 
 export function isSSORedirectAllowed(redirect: URL) {
+  if (localAuthPolicy) return isLocalTarget(redirect, localAuthPolicy);
   return ALLOWED_SSO_ORIGINS.has(redirect.origin);
 }
