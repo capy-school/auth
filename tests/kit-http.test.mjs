@@ -83,6 +83,23 @@ test('API-key dialog preview is fictional, initially open and disconnected witho
   assert.doesNotMatch(html, /Copied!|<a\b|<form\b|Welcome Back|2FA Protected|role="status"/);
 });
 
+test('API-key list/create preview serves only fictional empty presentation without cookies', async () => {
+  const response = await request('/__migration/api-keys');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/html/);
+  assert.equal(response.headers.get('set-cookie'), null);
+  const html = await response.text();
+  assert.match(html, /name="robots" content="noindex"/);
+  assert.match(html, /Fictional data and requests only — nothing is created or revoked\. Reload resets this preview\./);
+  assert.match(html, /Security Notice and Active\/Expired badges describe fixtures/);
+  for (const fixture of ['Empty', 'Loading', 'Populated', 'Hidden']) assert.match(html, new RegExp(`>${fixture}<`));
+  assert.match(html, /<form id="apiKeyForm" class="mb-6">/);
+  assert.match(html, /\brequired\b/);
+  assert.match(html, /Generate Key/);
+  assert.match(html, /No API Keys/);
+  assert.doesNotMatch(html, /<a\b|newKeyModal|role="status"|data-key-id|<(?:button|input)\b[^>]*\sdisabled\b/);
+});
+
 test('dev serves the shared stylesheet imported by the login client module', async () => {
   const response = await request('/src/styles/global.css');
   assert.equal(response.status, 200);

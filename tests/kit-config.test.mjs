@@ -164,6 +164,7 @@ test('only diagnostic and presentation routes exist and all candidate modules re
   assert.deepEqual(routes.filter((path) => /\.(svelte|ts|js)$/.test(path)).sort(), [
     '__migration/+page.svelte',
     '__migration/api-key-dialog/+page.svelte',
+    '__migration/api-keys/+page.svelte',
     '__migration/health/+server.ts',
     '__migration/login/+page.svelte',
     '__migration/passkeys/+page.svelte',
