@@ -1,0 +1,16 @@
+9a49cb4f0d84c12abf3d56139f5d24f9c677eb734b7f5c2fea569ac774b6811c  ../server/internal/auth/application/repositories.go
+45ac1bb0226c84764e86036586c61f86e0537e90ee3c6bb916016094c8a5ccf2  ../server/internal/auth/domain/models.go
+3a29a97c5e9df3316961b5477ecf3f7c1a35863c9c9c2f291790031a482e4b3f  ../server/internal/auth/infrastructure/turso/internal/storage/codec.go
+09ea2508578f41a54d1843d421e9366e1b7bc938940b1cf3dc9449a5a89331ba  ../server/internal/auth/infrastructure/turso/internal/storage/codec_test.go
+5ea05c5218b569e647aeabf20eea244a27eb8dde420d9e5b5f8ce34a77de8577  ../server/internal/auth/infrastructure/turso/internal/storage/schema.go
+1cbe051167f71cd3f68b167278de0f76453add18b31cabca28d5cc9a2321029f  ../server/internal/auth/infrastructure/turso/internal/storage/schema_test.go
+a84e12c665f6295a153f5ae409c0cff0f4ab29d82fe06aacee8a8244e0a2e05d  ../server/internal/auth/infrastructure/turso/internal/storage/store.go
+d7bbac83857f8591b3588559cd467c3520cb7f8f45afbd865546355b83f7fa6f  ../server/internal/auth/infrastructure/turso/internal/storage/store_test.go
+b6e90306caacfa45f8fa4d5ce5793510e250b3ce20472a62d2842e85e9aab786  ../server/internal/auth/infrastructure/turso/internal/storage/transaction.go
+e363e756f236fcef113d523784852a70b0704c221eba6a6aeaa0ea0c807f6446  ../server/internal/auth/infrastructure/turso/mapping.go
+8a09d55551e96b30b62cf4378f39c10b0371ad30ca12d904dad799a20ef95901  ../server/internal/auth/infrastructure/turso/repositories.go
+c5de158b0eefbbe5f9167a7ec9c760358a8f65c259f313617133858abd8885c5  ../server/internal/auth/infrastructure/turso/repositories_test.go
+ca87402a78557cd7fe373926b2f455099cc7382269f96aac0fbe6e42892dd2e4  ../server/internal/auth/infrastructure/turso/transaction.go
+adc8fb2ad0d1b66483f9b7c74ac199fbc84edab6ce2deda860267fee284a6921  ../server/internal/auth/infrastructure/turso/transaction_test.go
+55ad1f24265bea7351668849aa37f2948684086ae66d6f7e3e1045a6776687fa  ../server/go.mod
+3fb0fdf43a3063e55f85dc3a22f890bf2d99e74a255b16ab0df6906b136c7617  ../server/go.sum
