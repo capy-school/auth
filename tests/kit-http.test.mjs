@@ -10,7 +10,7 @@ async function request(path) {
 }
 
 test('diagnostic HTML identifies the incomplete non-default candidate', async () => {
-  const response = await request('/__migration');
+  const response = await request('/__migration/');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
@@ -19,12 +19,13 @@ test('diagnostic HTML identifies the incomplete non-default candidate', async ()
   assert.match(html, /<h1\b[^>]*>SvelteKit migration diagnostic<\/h1>/);
   assert.match(html, /Astro remains the default application/);
   assert.match(html, /No authentication or database access/);
-  assert.match(html, /href="\/__migration\/health"/);
+  assert.match(html, /HTML is generated at build time/);
+  assert.match(html, /href="\/__migration\/build\.json"/);
   assert.doesNotMatch(html, /<form\b/);
 });
 
 test('login preview serves passkey, collapsed email and all providers without cookies or success claims', async () => {
-  const response = await request('/__migration/login');
+  const response = await request('/__migration/login/');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
@@ -48,7 +49,7 @@ test('login preview serves passkey, collapsed email and all providers without co
 });
 
 test('passkey management preview is noindex, fictional and disconnected without account links', async () => {
-  const response = await request('/__migration/passkeys');
+  const response = await request('/__migration/passkeys/');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
@@ -66,7 +67,7 @@ test('passkey management preview is noindex, fictional and disconnected without 
 });
 
 test('API-key dialog preview is fictional, initially open and disconnected without cookies', async () => {
-  const response = await request('/__migration/api-key-dialog');
+  const response = await request('/__migration/api-key-dialog/');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
@@ -84,7 +85,7 @@ test('API-key dialog preview is fictional, initially open and disconnected witho
 });
 
 test('API-key list/create preview serves only fictional empty presentation without cookies', async () => {
-  const response = await request('/__migration/api-keys');
+  const response = await request('/__migration/api-keys/');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   assert.equal(response.headers.get('set-cookie'), null);
@@ -114,15 +115,14 @@ test('dev still blocks unrelated application source outside the candidate', asyn
   await response.body?.cancel();
 });
 
-test('server health returns only a non-sensitive marker without cookies', async () => {
-  const response = await request('/__migration/health');
+test('static build JSON is a non-sensitive marker, not a runtime health check', async () => {
+  const response = await request('/__migration/build.json');
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /application\/json/);
-  assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('set-cookie'), null);
   assert.deepEqual(await response.json(), {
-    status: 'ok',
-    candidate: 'sveltekit-diagnostic',
+    kind: 'static-build',
+    candidate: 'sveltekit-static-diagnostic',
     authentication: false,
   });
 });

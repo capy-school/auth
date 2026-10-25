@@ -163,40 +163,50 @@ Visit `http://localhost:4321` to see the login gateway.
 | `bun preview` | Preview production build |
 | `bun run db:migrate` | Run database migrations |
 
-## Non-default SvelteKit diagnostic candidate
+## Non-default static SvelteKit candidate
 
-Astro remains the default application and the sole production target. The additive
-`src/kit/` candidate exposes `/__migration`, `/__migration/health` and the
-presentation-only `/__migration/login` preview. It has no authentication, API proxy
-or database access; `/` and `/api/auth/*` remain absent. The preview preserves the
-six-provider chooser and existing styles, but selection only displays a disconnected
-preview status. Reusable components take presentation props and callbacks, not auth
-or redirect policy. Errors or missing callbacks natively disable provider buttons.
-**Do not deploy the candidate** or use it as evidence of authentication parity.
+Astro remains the default application and the sole production target. The isolated
+`src/kit/` candidate now generates real HTML during the build, with browser hydration
+but **no request-time SSR**. `adapter-static` rejects dynamic routes and has no SPA
+fallback. Cloudflare remains the hosting target; its candidate configuration serves
+only files from `.svelte-kit/static/`, without a Worker entry point or data bindings.
+
+Prerendered routes are `/__migration/`, `/__migration/login/`,
+`/__migration/passkeys/`, `/__migration/api-key-dialog/` and `/__migration/api-keys/`.
+`/__migration/build.json` contains fixed build metadata, **not runtime health**;
+the previous `/__migration/health` endpoint has been removed.
+
+All previews remain disconnected and use fictional data or request-only callbacks.
+There is no authentication, API proxy, session check or database access; `/` and
+`/api/auth/*` remain absent. **Do not deploy the candidate** or treat it as auth parity.
+Future browser session checks will use an authorized API; private session responses
+must not be shared-cacheable. Public static HTML never contains account data.
 
 ```bash
-node --test tests/kit-login.test.mjs
-bun run kit:test
-bun run kit:check
-bun run kit:build
-bun run kit:dev --host 127.0.0.1 --port 5173 --strictPort
+node --test --test-concurrency=1 tests/kit-login.test.mjs tests/kit-passkeys.test.mjs tests/kit-api-key-dialog.test.mjs tests/kit-api-keys.test.mjs
+bun --no-env-file run kit:test
+bun --no-env-file run kit:check
+bun --no-env-file run kit:build
+# Validate real HTML, JSON and assets using a plain-file HTTP host, without SSR:
+node --test tests/kit-static.test.mjs
+bun --no-env-file run kit:dev --host 127.0.0.1 --port 5173 --strictPort
 # In another terminal while that server is running:
 KIT_SMOKE_URL=http://127.0.0.1:5173 node --test tests/kit-http.test.mjs
 ```
 
-Rendered-state and HTTP tests do not prove hydration, callback clicks or browser
-network isolation; those require independent browser verification before acceptance.
-HTTP checks fail rather than skip when `KIT_SMOKE_URL` is absent. The candidate
-uses pinned SvelteKit 2 / Svelte 5 tooling, reuses `public/`, and checks only its own
-sources through `tsconfig.sveltekit.json`. Kit may warn that the root tsconfig does
-not extend its generated config; that root intentionally remains Astro-owned.
+These checks do not prove browser hydration/callback acceptance or deployed CDN HIT
+rates. A fully static frontend is cacheable, but cold caches and eviction still exist.
+HTTP development checks fail rather than skip without `KIT_SMOKE_URL`.
 
-`wrangler.sveltekit.jsonc` is separate from production configuration, with no
-custom domains, production routes, secrets or data bindings. The adapter writes
-`.svelte-kit/cloudflare/_worker.js` and assets in `.svelte-kit/cloudflare/`; generated
-output is ignored. Development binding emulation is disabled, and Kit/Vite discover
-environment files only under `src/kit/`, not the root authentication environment.
-No candidate deployment command is provided. Existing Astro commands are unchanged.
+The candidate pins SvelteKit 2 / Svelte 5 and adapter-static 3.0.10, reuses `public/`,
+and checks only its sources through `tsconfig.sveltekit.json`. Kit's root-tsconfig
+advisory is expected: that config remains Astro-owned. Intermediate server modules
+exist only to render the build; they are not in the static deployment directory.
+Kit/Vite discover environment files only under `src/kit/`; `--no-env-file` also stops
+Bun from loading the root authentication environment. Production configuration and
+Astro commands are unchanged; root `preview` still previews Astro. No candidate
+deployment command is provided. Continue the existing Go persistence work into a
+separate authentication API before connecting browser session checks.
 
 ## 🎯 Usage Examples
 

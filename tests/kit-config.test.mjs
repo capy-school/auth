@@ -17,8 +17,9 @@ const candidateFiles = [
   'wrangler.sveltekit.jsonc',
   'src/kit/app.html',
   'src/kit/app.d.ts',
+  'src/kit/routes/+layout.ts',
   'src/kit/routes/__migration/+page.svelte',
-  'src/kit/routes/__migration/health/+server.ts',
+  'src/kit/routes/__migration/build.json/+server.ts',
   'src/kit/routes/__migration/login/+page.svelte',
   'src/kit/lib/login/LoginShell.svelte',
   'src/kit/lib/login/AuthButton.svelte',
@@ -67,6 +68,7 @@ test('candidate scripts are opt-in and tooling versions are pinned', () => {
     svelte: '5.57.2',
     '@sveltejs/vite-plugin-svelte': '5.1.1',
     '@sveltejs/adapter-cloudflare': '7.2.9',
+    '@sveltejs/adapter-static': '3.0.10',
     'svelte-check': '4.7.6',
     typescript: '5.9.3',
     vite: '6.4.1',
@@ -97,9 +99,11 @@ test('Kit configuration confines source and environment discovery to the candida
   assert.equal(config.kit.env.dir, 'src/kit');
   assert.equal(config.kit.env.publicPrefix, 'PUBLIC_KIT_');
   assert.equal(config.kit.env.privatePrefix, 'KIT_');
-  assert.equal(config.kit.adapter.name, '@sveltejs/adapter-cloudflare');
+  assert.equal(config.kit.adapter.name, '@sveltejs/adapter-static');
   assert.equal(config.kit.adapter.emulate, undefined);
-  assert.match(source, /adapter\(\{ config: 'wrangler\.sveltekit\.jsonc' \}\)/);
+  assert.match(source, /pages: '\.svelte-kit\/static'/);
+  assert.match(source, /assets: '\.svelte-kit\/static'/);
+  assert.match(source, /strict: true/);
   const vite = read('vite.sveltekit.config.ts');
   assert.match(vite, /import \{ sveltekit \} from '@sveltejs\/kit\/vite'/);
   assert.match(vite, /import tailwindcss from '@tailwindcss\/vite'/);
@@ -125,18 +129,25 @@ test('dev adds only shared styles while preserving Kit serving paths and Vite de
   }
 });
 
-test('candidate Wrangler is an allowlisted local-only Worker configuration', () => {
+test('pages render at build time without an SPA fallback', () => {
+  const source = read('src/kit/routes/+layout.ts');
+  for (const option of ['prerender', 'ssr', 'csr']) {
+    assert.match(source, new RegExp(`export const ${option} = true;`));
+  }
+  assert.match(source, /export const trailingSlash = 'always';/);
+  assert.doesNotMatch(read('svelte.config.js'), /\bfallback\s*:/);
+  assert.match(read('src/kit/routes/__migration/build.json/+server.ts'), /export const prerender = true;/);
+});
+
+test('candidate Wrangler serves only static assets without a Worker or production routes', () => {
   assert.deepEqual(JSON.parse(read('wrangler.sveltekit.jsonc')), {
     $schema: 'node_modules/wrangler/config-schema.json',
     name: 'auth-sveltekit-candidate',
-    main: '.svelte-kit/cloudflare/_worker.js',
     compatibility_date: '2026-04-12',
-    compatibility_flags: ['nodejs_compat'],
     workers_dev: false,
     preview_urls: false,
     assets: {
-      directory: '.svelte-kit/cloudflare',
-      binding: 'ASSETS',
+      directory: '.svelte-kit/static',
     },
   });
 });
@@ -162,10 +173,11 @@ test('only diagnostic and presentation routes exist and all candidate modules re
   read('src/kit/app.html');
   const routes = readdirSync(new URL('../src/kit/routes/', import.meta.url), { recursive: true });
   assert.deepEqual(routes.filter((path) => /\.(svelte|ts|js)$/.test(path)).sort(), [
+    '+layout.ts',
     '__migration/+page.svelte',
     '__migration/api-key-dialog/+page.svelte',
     '__migration/api-keys/+page.svelte',
-    '__migration/health/+server.ts',
+    '__migration/build.json/+server.ts',
     '__migration/login/+page.svelte',
     '__migration/passkeys/+page.svelte',
   ]);

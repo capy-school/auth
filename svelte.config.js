@@ -1,13 +1,13 @@
-import adapter from '@sveltejs/adapter-cloudflare';
+import adapter from '@sveltejs/adapter-static';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
   kit: {
-    adapter: {
-      ...adapter({ config: 'wrangler.sveltekit.jsonc' }),
-      // Diagnostic routes need no bindings; avoid loading root development secrets.
-      emulate: undefined,
-    },
+    adapter: adapter({
+      pages: '.svelte-kit/static',
+      assets: '.svelte-kit/static',
+      strict: true,
+    }),
     files: {
       src: 'src/kit',
       assets: 'public',
