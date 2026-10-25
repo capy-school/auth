@@ -121,6 +121,15 @@ fn parse_date(text: &str) -> Result<OffsetDateTime> {
             .with_time(base.time())
             .assume_utc()
     } else {
+        // time's RFC3339 parser accepts arbitrary separators, lowercase z and
+        // leap seconds; Go's stored-date parser rejects those representations.
+        let bytes = text.as_bytes();
+        if bytes.get(10) != Some(&b'T')
+            || bytes.last() == Some(&b'z')
+            || bytes.get(17..19) == Some(b"60")
+        {
+            return Err(invalid());
+        }
         OffsetDateTime::parse(text, &Rfc3339)
             .map_err(|_| invalid())?
             .to_offset(UtcOffset::UTC)
@@ -277,6 +286,51 @@ mod tests {
             .is_ok());
         }
         assert!(decode(&field(Kind::String, false), SqlValue::Blob(vec![255])).is_err());
+    }
+
+    #[test]
+    fn stored_dates_reject_separators_and_timezone_case_that_go_rejects() {
+        for text in [
+            "2026-10-12X11:14:15.123Z",
+            "2026-10-12 11:14:15.123Z",
+            "2026-10-12t11:14:15.123Z",
+            "2026-10-12T11:14:15.123z",
+        ] {
+            let result = decode(&field(Kind::Date, false), SqlValue::Text(text.into()));
+            assert!(
+                result.is_err(),
+                "accepted malformed date {text}: {result:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn stored_dates_reject_leap_seconds_instead_of_normalizing_them() {
+        let result = decode(
+            &field(Kind::Date, false),
+            SqlValue::Text("2016-12-31T23:59:60Z".into()),
+        );
+        assert!(
+            result.is_err(),
+            "normalized unsupported leap second: {result:?}"
+        );
+    }
+
+    #[test]
+    fn stored_dates_preserve_valid_offsets_and_fractional_precision() {
+        for (text, utc) in [
+            ("2026-10-12T13:14:15+02:00", "2026-10-12T11:14:15Z"),
+            (
+                "2026-10-12T06:14:15.123987654-05:00",
+                "2026-10-12T11:14:15.123987654Z",
+            ),
+            ("2026-10-12T11:14:15.1Z", "2026-10-12T11:14:15.1Z"),
+        ] {
+            assert_eq!(
+                decode(&field(Kind::Date, false), SqlValue::Text(text.into())).unwrap(),
+                Value::Date(OffsetDateTime::parse(utc, &Rfc3339).unwrap()),
+            );
+        }
     }
 
     #[test]
