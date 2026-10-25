@@ -67,10 +67,22 @@ impl Store {
             .cleanup
             .lock()
             .map_err(|_| Error::InvalidInput("transaction cleanup lock poisoned"))?
-            .take();
+            .clone();
         if let Some(scope) = pending {
-            // Drain a child operation before the SDK rolls back a dropped transaction.
+            // Keep recovery state until cleanup finishes, even if this future is dropped.
             let _drain = scope.gate.lock().await;
+            if !self.shared.conn.is_autocommit().map_err(storage_error)? {
+                self.shared
+                    .conn
+                    .execute("ROLLBACK", ())
+                    .await
+                    .map_err(storage_error)?;
+            }
+            self.shared
+                .cleanup
+                .lock()
+                .map_err(|_| Error::InvalidInput("transaction cleanup lock poisoned"))?
+                .take();
         }
         Ok(guard)
     }
@@ -252,6 +264,7 @@ impl Store {
 mod tests {
     use super::super::{Field, Kind, Model};
     use super::*;
+    use std::future::Future;
 
     async fn fixture() -> Store {
         let db = turso::Builder::new_local(":memory:").build().await.unwrap();
@@ -452,6 +465,88 @@ mod tests {
         assert!(
             store.get("user", "a").await.is_err(),
             "malformed stored type must not be coerced"
+        );
+    }
+
+    #[tokio::test]
+    async fn recovers_an_orphaned_begin_without_an_sdk_transaction_guard() {
+        let store = fixture().await;
+        store
+            .shared
+            .conn
+            .execute("BEGIN DEFERRED", ())
+            .await
+            .unwrap();
+        store
+            .shared
+            .conn
+            .execute("INSERT INTO auth_user (user_id) VALUES ('orphan')", ())
+            .await
+            .unwrap();
+        *store.shared.cleanup.lock().unwrap() = Some(Arc::new(Scope {
+            active: AtomicBool::new(false),
+            gate: Mutex::new(()),
+        }));
+        assert_eq!(
+            store.get("user", "orphan").await.unwrap_err(),
+            Error::NotFound
+        );
+        assert!(store.shared.conn.is_autocommit().unwrap());
+    }
+
+    #[tokio::test]
+    async fn cancelled_cleanup_keeps_the_pending_scope_for_the_next_root_operation() {
+        let store = fixture().await;
+        let scope = Arc::new(Scope {
+            active: AtomicBool::new(false),
+            gate: Mutex::new(()),
+        });
+        let held = scope.gate.lock().await;
+        *store.shared.cleanup.lock().unwrap() = Some(scope.clone());
+        let mut read = Box::pin(store.get("user", "missing"));
+        std::future::poll_fn(|cx| {
+            assert!(read.as_mut().poll(cx).is_pending());
+            std::task::Poll::Ready(())
+        })
+        .await;
+        drop(read);
+        assert!(
+            store.shared.cleanup.lock().unwrap().is_some(),
+            "cancelled cleanup lost its recovery state"
+        );
+        drop(held);
+        assert_eq!(
+            store.get("user", "missing").await.unwrap_err(),
+            Error::NotFound
+        );
+        assert!(store.shared.cleanup.lock().unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn a_scoped_waiter_rechecks_liveness_after_acquiring_its_operation_gate() {
+        let store = fixture().await;
+        let scope = Arc::new(Scope {
+            active: AtomicBool::new(true),
+            gate: Mutex::new(()),
+        });
+        let child = Store {
+            shared: store.shared.clone(),
+            schema: store.schema.clone(),
+            scope: Some(scope.clone()),
+        };
+        let held = scope.gate.lock().await;
+        let mut write = Box::pin(child.create("user", record("late-waiter", None)));
+        std::future::poll_fn(|cx| {
+            assert!(write.as_mut().poll(cx).is_pending());
+            std::task::Poll::Ready(())
+        })
+        .await;
+        scope.active.store(false, Ordering::SeqCst);
+        drop(held);
+        assert_eq!(write.await.unwrap_err(), Error::ClosedScope);
+        assert_eq!(
+            store.get("user", "late-waiter").await.unwrap_err(),
+            Error::NotFound
         );
     }
 
