@@ -4,16 +4,17 @@ import Sessions from './Sessions.astro';
 import Passkeys from './Passkeys.astro';
 import ApiKeys from './ApiKeys.astro';
 import TwoFactor from './TwoFactor.astro';
+import Organizations from './Organizations.astro';
 import type { AccountUser } from './types';
 interface Props {
-  page: 'security' | 'sessions' | 'passkey' | 'two-factor' | 'api-keys';
+  page: 'security' | 'sessions' | 'passkey' | 'two-factor' | 'api-keys' | 'organizations';
   user: AccountUser;
   passkeysAvailable?: boolean;
 }
 const { page, user, passkeysAvailable = true } = Astro.props;
 const titles = { security: 'Seguridad', sessions: 'Sesiones activas', passkey: 'Passkeys', 'two-factor': 'Autenticación en dos pasos', 'api-keys': 'Claves de API', organizations: 'Organizaciones' };
 const descriptions = { security: 'Elige cómo acceder y proteger tu cuenta.', sessions: 'Consulta tus accesos y cierra los que no reconozcas.', passkey: 'Gestiona las credenciales de tus dispositivos.', 'two-factor': 'Una comprobación adicional, verificada por el servidor.', 'api-keys': 'Controla el acceso de tus aplicaciones.', organizations: 'Gestiona tus espacios compartidos, miembros e invitaciones.' };
-const active = page === 'sessions' ? page : 'security';
+const active = page === 'sessions' || page === 'organizations' ? page : 'security';
 ---
 <AccountShell {user} {active} title={titles[page]} description={descriptions[page]}>
   <div class="account-page-content">
@@ -23,5 +24,6 @@ const active = page === 'sessions' ? page : 'security';
     {page === 'passkey' && !passkeysAvailable && <p class="account-notice">Las passkeys no están habilitadas en este entorno. No se ha registrado ningún dispositivo. Puedes usar el enlace de acceso habitual.</p>}
     {page === 'api-keys' && <ApiKeys />}
     {page === 'two-factor' && <TwoFactor />}
+    {page === 'organizations' && <Organizations />}
   </div>
 </AccountShell>

@@ -78,6 +78,36 @@ test('API key create/list/delete uses the controller contract and preserves lite
   assert.equal(defaultExpiry.expiresAt, null, 'omitting expiresIn creates a permanent key');
 });
 
+test('organization creation, members and invitations match the selected-organization contract', async () => {
+  const client = await login('organization@example.invalid');
+  const org = await client.json('/organization/create', { name: 'Contrato aislado', slug: 'contrato-aislado', keepCurrentActiveOrganization: false });
+  assert.equal((await client.json('/organization/list'))[0].id, org.id);
+  const members = await client.json(`/organization/list-members?organizationId=${org.id}`);
+  assert.equal(members.members[0].role, 'owner');
+  const invitation = await client.json('/organization/invite-member', { organizationId: org.id, email: 'invited@example.invalid', role: 'member' });
+  const invitations = await client.json(`/organization/list-invitations?organizationId=${org.id}`);
+  assert.equal(invitations[0].id, invitation.id);
+  await client.json('/organization/cancel-invitation', { invitationId: invitation.id });
+  assert.equal((await client.json(`/organization/list-invitations?organizationId=${org.id}`))[0].status, 'canceled');
+});
+
+test('member removal uses explicit organization scope rather than the active organization', async () => {
+  const owner = await login('scoped-owner@example.invalid');
+  const member = await login('scoped-member@example.invalid');
+  const first = await owner.json('/organization/create', { name: 'Primera', slug: 'primera', keepCurrentActiveOrganization: false });
+  const second = await owner.json('/organization/create', { name: 'Segunda', slug: 'segunda', keepCurrentActiveOrganization: false });
+  const invitation = await owner.json('/organization/invite-member', { organizationId: first.id, email: 'scoped-member@example.invalid', role: 'member' });
+  await member.json('/organization/accept-invitation', { invitationId: invitation.id });
+  const members = await owner.json(`/organization/list-members?organizationId=${first.id}`);
+  const target = members.members.find((item: { user: { email: string } }) => item.user.email === 'scoped-member@example.invalid');
+  const wrongScope = await owner.request('/organization/remove-member', { memberIdOrEmail: target.id, organizationId: second.id });
+  assert.ok(wrongScope.status >= 400 && wrongScope.status < 500);
+  assert.equal((await owner.json(`/organization/list-members?organizationId=${first.id}`)).members.length, 2);
+  await owner.json('/organization/remove-member', { memberIdOrEmail: target.id, organizationId: first.id });
+  assert.equal((await owner.json(`/organization/list-members?organizationId=${first.id}`)).members.length, 1);
+  assert.equal((await owner.json(`/organization/list-members?organizationId=${second.id}`)).members.length, 1);
+});
+
 test('installed passkey delete returns JSON null after deleting an owned credential', async () => {
   const client = await login('passkey-contract@example.invalid');
   // Enable the existing plugin only on this extra test instance and migrate

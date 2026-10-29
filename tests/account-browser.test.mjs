@@ -98,6 +98,21 @@ test('2FA accepts only server verification and keeps backup codes until acknowle
   await submit('[data-two-factor-disable]', { password: 'fictional-password' });
   await wait(`document.querySelector('[data-two-factor-state]').textContent.includes('No activada')`);
 });
+test('organizations create and scope member/invitation operations to the selected team', async () => {
+  await visit('/settings/organizations');
+  await submit('[data-organization-create]', { name: 'Equipo nuevo', slug: 'equipo-nuevo' });
+  await wait(`document.querySelectorAll('[data-organization-select]').length===3`);
+  await evaluate(`document.querySelectorAll('[data-organization-select]')[1].click()`);
+  await wait(`document.querySelector('[data-members]').textContent.includes('org-b')`);
+  await submit('[data-organization-invite]', { email: 'new@example.invalid', role: 'member' });
+  await wait(`__calls.some(c=>c.method==='organization.inviteMember')`);
+  assert.equal(await evaluate(`__calls.find(c=>c.method==='organization.inviteMember').arg.organizationId`), 'org-b');
+  await evaluate(`window.confirm=()=>true;document.querySelector('[data-member-remove]').click()`);
+  await wait(`__calls.some(c=>c.method==='organization.removeMember')`);
+  assert.equal(await evaluate(`__calls.find(c=>c.method==='organization.removeMember').arg.organizationId`), 'org-b');
+  await evaluate(`document.querySelector('[data-invitation-cancel]').click()`);
+  await wait(`__calls.some(c=>c.method==='organization.cancelInvitation')`);
+});
 
 test('a failed revoke keeps the other session visible and reports no success', async () => {
   await visit('/settings/sessions', `window.__failMethod='revokeSession';`);
@@ -133,6 +148,24 @@ test('failed 2FA disable leaves server-confirmed protection active', async () =>
   await wait(`!document.querySelector('[data-error]').hidden`);
   assert.match(await evaluate(`document.querySelector('[data-two-factor-state]').textContent`), /^Activada:/);
   assert.equal(await evaluate(`document.querySelector('#two-factor-disable-password').value`), '');
+});
+test('read-only organization members never get invitation/removal controls', async () => {
+  await visit('/settings/organizations', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{const result=await original(method,arg);if(method==='organization.listMembers')result.data.members[0].role='member';return result};`);
+  await evaluate(`document.querySelector('[data-organization-select]').click()`);
+  await wait(`!document.querySelector('[data-readonly]').hidden`);
+  assert.equal(await evaluate(`document.querySelector('[data-management]').hidden`), true);
+  assert.equal(await evaluate(`document.querySelectorAll('[data-member-remove]').length`), 0);
+  assert.equal(await evaluate(`__calls.some(call=>call.method==='organization.listInvitations')`), false);
+});
+test('organization selection locks other selectors while details are in flight', async () => {
+  await visit('/settings/organizations', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{const result=await original(method,arg);if(method==='organization.listMembers'&&arg.query.organizationId==='org-a')return new Promise(resolve=>window.__finishMembers=()=>resolve(result));return result};`);
+  await evaluate(`document.querySelector('[data-organization-select]').click()`);
+  await wait(`typeof window.__finishMembers==='function'`);
+  assert.equal(await evaluate(`document.querySelectorAll('[data-organization-select]')[1].disabled`), true);
+  assert.equal(await evaluate(`document.querySelector('[data-members]').children.length`), 0);
+  await evaluate(`window.__finishMembers()`);
+  await wait(`!document.querySelectorAll('[data-organization-select]')[1].disabled`);
+  assert.match(await evaluate(`document.querySelector('[data-members]').textContent`), /org-a/);
 });
 test('pending TOTP verification cannot be cancelled and lose recovery material', async () => {
   await visit('/settings/2fa', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{const result=await original(method,arg);if(method==='twoFactor.verifyTotp')return new Promise(resolve=>window.__finishVerification=()=>resolve(result));return result};`);

@@ -1,0 +1,23 @@
+---
+import Feedback from './Feedback.astro';
+---
+<section class="account-manager" data-manager="organizations" aria-label="Gestionar organizaciones">
+  <Feedback />
+  <div class="account-organization-columns">
+    <section aria-labelledby="your-organizations"><h2 id="your-organizations">Tus organizaciones</h2><p class="account-empty" data-empty hidden>Aún no perteneces a ninguna organización. Puedes crear tu primer espacio compartido.</p><ul class="account-list" data-list></ul></section>
+    <form class="account-form" data-organization-create method="post"><fieldset disabled data-client-fields><legend>Crear organización</legend><label for="organization-name">Nombre</label><input id="organization-name" name="name" required maxlength="100" autocomplete="off" /><label for="organization-slug">Identificador</label><input id="organization-slug" name="slug" required maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="mi-equipo" autocomplete="off" /><p class="account-hint">Letras minúsculas, números y guiones.</p><button class="account-button is-primary" type="submit">Crear organización</button></fieldset></form>
+  </div>
+  <section class="account-organization-details" data-details hidden aria-labelledby="organization-heading">
+    <h2 id="organization-heading" data-organization-heading></h2>
+    <p class="account-hint" data-detail-loading hidden>Cargando miembros e invitaciones…</p>
+    <h3>Miembros</h3><ul class="account-list" data-members></ul>
+    <div data-management hidden>
+      <form class="account-form" data-organization-invite method="post"><fieldset disabled data-client-fields><legend>Invitar a una persona</legend><label for="invitation-email">Correo electrónico</label><input id="invitation-email" type="email" name="email" required autocomplete="email" /><label for="invitation-role">Rol</label><select id="invitation-role" name="role"><option value="member">Miembro</option><option value="admin">Administrador</option></select><button class="account-button is-primary" type="submit">Enviar invitación</button></fieldset></form>
+      <h3>Invitaciones pendientes</h3><ul class="account-list" data-invitations></ul><p class="account-hint" data-no-invitations hidden>No hay invitaciones pendientes.</p>
+    </div>
+    <p class="account-hint" data-readonly hidden>Tu rol permite consultar miembros. La gestión requiere permisos de administración.</p>
+  </section>
+</section>
+<script>
+  import './organizations';
+</script>

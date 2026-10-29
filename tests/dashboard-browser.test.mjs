@@ -13,9 +13,9 @@ async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
   await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if([...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
 }
-const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey","/settings/2fa","/settings/api-keys"];
+const paths = ['/dashboard', '/settings/security', '/settings/sessions', '/settings/passkey', '/settings/2fa', '/settings/api-keys', '/settings/organizations'];
 
-test('migrated account views retain the shared shell and usable mobile navigation', async () => {
+test('every sidebar link resolves to the shared shell and remains available on narrow mobile', async () => {
   for (const width of [1440, 390, 320]) {
     await browser.page('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
     for (const path of paths) {
@@ -57,7 +57,17 @@ test('keyboard users get a visible skip link and an exposed empty success region
   assert.equal(nodes[0].role.value, 'status');
 });
 test('shared unfocused fields have at least 3:1 boundary contrast', async () => {
-  await visit('/settings/passkey');
+  await visit('/settings/organizations');
   const ratios = await evaluate(`(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d',{willReadFrequently:true});const luminance=color=>{context.fillStyle=color;context.fillRect(0,0,1,1);const rgb=[...context.getImageData(0,0,1,1).data].slice(0,3).map(value=>{value/=255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4});return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2]};return [...document.querySelectorAll('input,select')].map(field=>{const style=getComputedStyle(field),first=luminance(style.borderTopColor),second=luminance(style.backgroundColor);return(Math.max(first,second)+.05)/(Math.min(first,second)+.05)})})()`);
   for (const ratio of ratios) assert.ok(ratio >= 3, `boundary contrast ${ratio.toFixed(2)}:1`);
+});
+test('long profile values and hostile organization names stay inert and wrap', async () => {
+  await visit('/settings/organizations', `window.__orgs=[{id:'long',name:'<img src=x onerror=alert(1)>'.repeat(40),slug:'long-slug'}];`);
+  await evaluate(`document.querySelector('.dashboard-sidebar-account strong').textContent='Nombre'.repeat(60)`);
+  for (const width of [1440, 390, 320]) {
+    await browser.page('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+    assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), true, `long text at ${width}`);
+  }
+  assert.equal(await evaluate(`document.querySelectorAll('.account-list img').length`), 0);
+  assert.deepEqual(browser.exceptions, []);
 });
