@@ -1,0 +1,7 @@
+---
+import { auth } from '../../lib/auth';
+import AccountPage from '../../components/account/AccountPage.astro';
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session?.user) return Astro.redirect('/');
+---
+<AccountPage page="sessions" user={session.user} />

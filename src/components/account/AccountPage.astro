@@ -1,0 +1,20 @@
+---
+import AccountShell from './AccountShell.astro';
+import Sessions from './Sessions.astro';
+import type { AccountUser } from './types';
+interface Props {
+  page: 'security' | 'sessions';
+  user: AccountUser;
+  passkeysAvailable?: boolean;
+}
+const { page, user, passkeysAvailable = true } = Astro.props;
+const titles = { security: 'Seguridad', sessions: 'Sesiones activas', passkey: 'Passkeys', 'two-factor': 'Autenticación en dos pasos', 'api-keys': 'Claves de API', organizations: 'Organizaciones' };
+const descriptions = { security: 'Elige cómo acceder y proteger tu cuenta.', sessions: 'Consulta tus accesos y cierra los que no reconozcas.', passkey: 'Gestiona las credenciales de tus dispositivos.', 'two-factor': 'Una comprobación adicional, verificada por el servidor.', 'api-keys': 'Controla el acceso de tus aplicaciones.', organizations: 'Gestiona tus espacios compartidos, miembros e invitaciones.' };
+const active = page === 'sessions' ? page : 'security';
+---
+<AccountShell {user} {active} title={titles[page]} description={descriptions[page]}>
+  <div class="account-page-content">
+    {page === 'security' && <section class="account-security" aria-label="Métodos de acceso"><p class="account-notice">{user.emailVerified ? 'Tu correo está verificado.' : 'Tu correo no figura como verificado.'} El estado de cada método se consulta en sus ajustes.</p><div class="dashboard-settings-list">{[['/settings/passkey', 'Passkeys', 'Dispositivos y acceso sin contraseña.'], ['/settings/2fa', 'Autenticación en dos pasos', 'Estado y configuración de tu segundo factor.'], ['/settings/api-keys', 'Claves de API', 'Acceso para tus aplicaciones.'], ['/settings/sessions', 'Sesiones activas', 'Dispositivos con una sesión vigente.']].map(([href, title, description]) => <a class="dashboard-setting" {href}><span class="dashboard-setting-copy"><strong>{title}</strong><span>{description}</span></span><span aria-hidden="true">→</span></a>)}</div></section>}
+    {page === 'sessions' && <Sessions />}
+  </div>
+</AccountShell>

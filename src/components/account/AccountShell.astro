@@ -1,0 +1,47 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import Icon from '../dashboard/Icon.astro';
+import type { AccountUser } from './types';
+interface Props {
+  user: AccountUser;
+  active: 'overview' | 'security' | 'sessions' | 'organizations';
+  title: string;
+  description: string;
+}
+const { user, active, title, description } = Astro.props;
+const name = user.name?.trim() || user.email || 'Mi cuenta';
+const initials = name.split(/\s+/).slice(0, 2).map(part => Array.from(part)[0]).join('').toLocaleUpperCase('es');
+const navigation = [
+  { id: 'overview', href: '/dashboard', icon: 'grid', label: 'Resumen' },
+  { id: 'security', href: '/settings/security', icon: 'shield', label: 'Seguridad' },
+  { id: 'sessions', href: '/settings/sessions', icon: 'device', label: 'Sesiones' },
+  { id: 'organizations', href: '/settings/organizations', icon: 'building', label: 'Organizaciones' },
+] as const;
+const section = navigation.find(item => item.id === active)!;
+---
+<DashboardLayout title={`${title} - Login Gateway`}>
+  <a class="dashboard-skip" href="#dashboard-main">Saltar al contenido</a>
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <a class="dashboard-wordmark" href="/dashboard" aria-label="Login Gateway, mi cuenta"><span class="dashboard-mark"><Icon name="key" /></span>Login Gateway</a>
+      <p class="dashboard-eyebrow">Tu espacio</p>
+      <nav class="dashboard-navigation" aria-label="Mi cuenta">
+        {navigation.map(item => <a class:list={{ 'is-current': item.id === active }} href={item.href} aria-current={item.id === active ? 'page' : undefined}><Icon name={item.icon} />{item.label}</a>)}
+      </nav>
+      <div class="dashboard-sidebar-account">
+        <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true">{initials}</span>
+        <div><strong>{name}</strong><span>{user.email || 'Mi cuenta'}</span></div>
+      </div>
+    </aside>
+    <div class="dashboard-content">
+      <header class="dashboard-topbar">
+        <nav class="dashboard-breadcrumb" aria-label="Ubicación"><a href="/dashboard">Mi cuenta</a><span aria-hidden="true">/</span><a href={section.href}>{section.label}</a>{title !== section.label && active !== 'overview' && <><span aria-hidden="true">/</span><span>{title}</span></>}</nav>
+        <a class="dashboard-signout" href="/logout"><Icon name="out" />Cerrar sesión</a>
+      </header>
+      <main class="dashboard-main" id="dashboard-main" tabindex="-1">
+        <header class="dashboard-heading"><h1>{title}</h1><p>{description}</p></header>
+        <slot />
+      </main>
+    </div>
+  </div>
+</DashboardLayout>

@@ -1,0 +1,15 @@
+---
+import Feedback from './Feedback.astro';
+interface Props { summary?: boolean }
+const { summary = false } = Astro.props;
+---
+<section class:list={['account-manager', { 'account-session-summary': summary }]} data-manager="sessions" data-summary={String(summary)} aria-label="Sesiones activas">
+  {summary && <header class="account-panel-heading"><h2>Sesiones activas</h2><p>Revisa desde dónde tienes acceso a tu cuenta.</p></header>}
+  <Feedback />
+  <p class="account-empty" data-empty hidden>No hay sesiones vigentes para mostrar.</p>
+  <ul class="account-list" data-list></ul>
+  {summary ? <a class="account-text-link" href="/settings/sessions">Gestionar sesiones <span aria-hidden="true">→</span></a> : <p class="account-hint">Si no reconoces una sesión, ciérrala. Para salir de este dispositivo, utiliza Cerrar sesión en la cabecera.</p>}
+</section>
+<script>
+  import './sessions';
+</script>

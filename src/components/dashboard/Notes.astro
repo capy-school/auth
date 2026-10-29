@@ -1,0 +1,34 @@
+---
+import Icon from './Icon.astro';
+---
+<aside class="dashboard-notes" id="local-notes" data-notes aria-labelledby="notes-heading">
+  <header class="notes-heading">
+    <h2 id="notes-heading">Notas locales</h2>
+    <span class="notes-location"><Icon name="device" />Este navegador</span>
+  </header>
+  <div class="notes-empty" data-notes-empty hidden>
+    <Icon name="note" />
+    <h3>Un espacio para recordar</h3>
+    <p>Añade una nota para tenerla a mano en este dispositivo.</p>
+  </div>
+  <ul class="notes-list" id="notesList" data-notes-list hidden></ul>
+  <form id="notesForm" method="post" data-notes-form>
+    <fieldset data-notes-fields disabled>
+      <legend class="visually-hidden">Añadir una nota local</legend>
+      <label for="noteTitle">Título de la nota</label>
+      <input id="noteTitle" type="text" placeholder="Por ejemplo, entorno de pruebas" autocomplete="off" required />
+      <label for="noteSecret">Contenido</label>
+      <textarea id="noteSecret" rows="3" placeholder="Escribe un recordatorio" autocomplete="off" required></textarea>
+      <button class="dashboard-primary" type="submit"><Icon name="plus" />Añadir nota</button>
+    </fieldset>
+  </form>
+  <p class="notes-warning">Sin cifrado ni sincronización. No guardes contraseñas ni claves.</p>
+  <p class="notes-error" data-notes-error role="alert" hidden></p>
+  <button class="notes-retry" type="button" data-notes-retry hidden>Volver a intentar</button>
+  <p class="notes-status" data-notes-status role="status" aria-live="polite"></p>
+  <noscript><p class="notes-warning">Activa JavaScript para consultar y guardar notas en este navegador.</p></noscript>
+</aside>
+<script>
+  import { mountNotes } from './notes';
+  document.querySelectorAll<HTMLElement>('[data-notes]').forEach(root => mountNotes(root));
+</script>
