@@ -103,3 +103,30 @@ function totp(secret: string, time = Date.now()): string {
   const hash = createHmac('sha1', key).update(counter).digest();
   return String((hash.readUInt32BE(hash[hash.length - 1] & 15) & 0x7fffffff) % 1000000).padStart(6, '0');
 }
+
+test('real 2FA rejects passwordless setup and invalid six-digit codes, then verifies server TOTP', async () => {
+  const client = await login('factor@example.invalid');
+  const denied = await client.request('/two-factor/enable', { password: 'not-a-real-password' });
+  assert.ok(denied.status >= 400 && denied.status < 500);
+  const session = await instance.auth.api.getSession({ headers: client.headers() });
+  assert.ok(!session?.user.twoFactorEnabled);
+  // Seed only this owned test database with a credential. Production/local auth
+  // configuration remains unchanged and password sign-in stays disabled.
+  const context = await instance.auth.$context;
+  await context.internalAdapter.createAccount({ userId: session!.user.id, accountId: session!.user.id, providerId: 'credential', password: await context.password.hash('fictional-contract-password') });
+  const accounts = await client.json('/list-accounts');
+  assert.ok(accounts.some((account: { providerId: string }) => account.providerId === 'credential'));
+  const setup = await client.json('/two-factor/enable', { password: 'fictional-contract-password' });
+  const secret = new URL(setup.totpURI).searchParams.get('secret')!;
+  assert.ok(setup.backupCodes.length > 0);
+  const neighboring = new Set([-2, -1, 0, 1, 2].map(offset => totp(secret, Date.now() + offset * 30000)));
+  let wrong = '000000'; while (neighboring.has(wrong)) wrong = String(Number(wrong) + 1).padStart(6, '0');
+  const invalid = await client.request('/two-factor/verify-totp', { code: wrong });
+  assert.ok(invalid.status >= 400 && invalid.status < 500);
+  assert.equal((await invalid.json()).code, 'INVALID_TWO_FACTOR_COOKIE');
+  assert.ok(!(await instance.auth.api.getSession({ headers: client.headers() }))?.user.twoFactorEnabled);
+  await client.json('/two-factor/verify-totp', { code: totp(secret) });
+  assert.equal((await instance.auth.api.getSession({ headers: client.headers() }))?.user.twoFactorEnabled, true);
+  await client.json('/two-factor/disable', { password: 'fictional-contract-password' });
+  assert.equal((await instance.auth.api.getSession({ headers: client.headers() }))?.user.twoFactorEnabled, false);
+});

@@ -74,6 +74,30 @@ test('API keys render hostile names inertly and retain one-time value after clip
   await evaluate(`window.confirm=()=>true;document.querySelector('[data-key-delete]').click()`);
   await wait(`document.querySelectorAll('.account-row').length===1`);
 });
+test('passwordless accounts never get a simulated 2FA activation', async () => {
+  await visit('/settings/2fa', `window.__credential=false;localStorage.setItem('2fa_enabled','true');`);
+  assert.match(await evaluate(`document.querySelector('[data-manager="two-factor"]').textContent`), /sin contraseña/);
+  assert.equal(await evaluate(`document.querySelector('[data-two-factor-form]').hidden`), true);
+  assert.match(await evaluate(`document.querySelector('[data-two-factor-state]').textContent`), /No activada/);
+});
+test('2FA accepts only server verification and keeps backup codes until acknowledged', async () => {
+  await visit('/settings/2fa');
+  await submit('[data-two-factor-form]', { password: 'fictional-password' });
+  await wait(`!document.querySelector('[data-two-factor-verify]').hidden`);
+  await wait(`document.querySelector('[data-totp-qr]').naturalWidth>0`);
+  assert.equal(await evaluate(`document.querySelector('[data-totp-secret]').textContent`), 'JBSWY3DPEHPK3PXP');
+  await submit('[data-two-factor-verify]', { code: '000000' });
+  await wait(`document.querySelector('[data-error]').textContent.includes('Código no válido')`);
+  assert.match(await evaluate(`document.querySelector('[data-two-factor-state]').textContent`), /No activada/);
+  await submit('[data-two-factor-verify]', { code: '123456' });
+  await wait(`document.querySelector('[data-two-factor-state]').textContent.includes('Activada')`);
+  assert.match(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), /fictional-backup-one/);
+  await evaluate(`document.querySelector('[data-backup-saved]').click()`);
+  assert.equal(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), '');
+  await evaluate(`window.confirm=()=>true`);
+  await submit('[data-two-factor-disable]', { password: 'fictional-password' });
+  await wait(`document.querySelector('[data-two-factor-state]').textContent.includes('No activada')`);
+});
 
 test('a failed revoke keeps the other session visible and reports no success', async () => {
   await visit('/settings/sessions', `window.__failMethod='revokeSession';`);
@@ -102,4 +126,56 @@ test('new API keys retain the existing one-year expiration policy', async () => 
   await submit('[data-api-key-form]', { name: 'Integración anual' });
   await wait(`!document.querySelector('[data-new-key]').hidden`);
   assert.equal(await evaluate(`__calls.find(call=>call.method==='apiKey.create').arg.expiresIn`), 60 * 60 * 24 * 365);
+});
+test('failed 2FA disable leaves server-confirmed protection active', async () => {
+  await visit('/settings/2fa', `window.__twoFactor=true;window.__failMethod='twoFactor.disable';window.confirm=()=>true;`);
+  await submit('[data-two-factor-disable]', { password: 'fictional-password' });
+  await wait(`!document.querySelector('[data-error]').hidden`);
+  assert.match(await evaluate(`document.querySelector('[data-two-factor-state]').textContent`), /^Activada:/);
+  assert.equal(await evaluate(`document.querySelector('#two-factor-disable-password').value`), '');
+});
+test('pending TOTP verification cannot be cancelled and lose recovery material', async () => {
+  await visit('/settings/2fa', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{const result=await original(method,arg);if(method==='twoFactor.verifyTotp')return new Promise(resolve=>window.__finishVerification=()=>resolve(result));return result};`);
+  await submit('[data-two-factor-form]', { password: 'fictional-password' });
+  await wait(`!document.querySelector('[data-two-factor-verify]').hidden`);
+  await submit('[data-two-factor-verify]', { code: '123456' });
+  await wait(`typeof window.__finishVerification==='function'`);
+  const locked = await evaluate(`document.querySelector('[data-two-factor-cancel]').disabled`);
+  await evaluate(`document.querySelector('[data-two-factor-cancel]').click();window.__finishVerification()`);
+  await wait(`document.querySelector('[data-two-factor-state]').textContent.startsWith('Activada:')`);
+  assert.equal(locked, true);
+  assert.match(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), /fictional-backup-one/);
+});
+test('an uncertain verification result retains recovery codes until server reconciliation', async () => {
+  await visit('/settings/2fa', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{const result=await original(method,arg);if(method==='twoFactor.verifyTotp')window.__failMethod='getSession';return result};`);
+  await submit('[data-two-factor-form]', { password: 'fictional-password' });
+  await wait(`!document.querySelector('[data-two-factor-verify]').hidden`);
+  await submit('[data-two-factor-verify]', { code: '123456' });
+  await wait(`!document.querySelector('[data-error]').hidden`);
+  assert.equal(await evaluate(`document.querySelector('[data-two-factor-cancel]').disabled`), true);
+  assert.match(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), /fictional-backup-one/);
+  assert.equal(await evaluate(`document.querySelector('[data-retry]').hidden`), false);
+  await evaluate(`window.__failMethod=null;document.querySelector('[data-retry]').click()`);
+  await wait(`document.querySelector('[data-two-factor-state]').textContent.startsWith('Activada:')`);
+  assert.match(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), /fictional-backup-one/);
+});
+test('an inactive read after a transport failure cannot discard a still-pending activation', async () => {
+  await visit('/settings/2fa', `const original=window.__accountCall;window.__accountCall=async(method,arg)=>{if(method==='twoFactor.verifyTotp'){window.__commitLater=()=>window.__twoFactor=true;throw new Error('Response lost while server is processing')};return original(method,arg)};`);
+  await submit('[data-two-factor-form]', { password: 'fictional-password' });
+  await wait(`!document.querySelector('[data-two-factor-verify]').hidden`);
+  await submit('[data-two-factor-verify]', { code: '123456' });
+  await wait(`!document.querySelector('[data-error]').hidden`);
+  const locked = await evaluate(`document.querySelector('[data-two-factor-cancel]').disabled`);
+  await evaluate(`document.querySelector('[data-two-factor-cancel]').click()`);
+  const material = await evaluate(`document.querySelector('[data-backup-codes]').textContent`);
+  await evaluate(`document.querySelector('[data-retry]').click()`);
+  await wait(`__calls.filter(call=>call.method==='getSession').length>=3&&document.querySelector('[data-manager]').getAttribute('aria-busy')==='false'`);
+  const lockedAfterInactiveRetry = await evaluate(`document.querySelector('[data-two-factor-cancel]').disabled`);
+  await evaluate(`window.__commitLater()`);
+  assert.equal(locked, true);
+  assert.equal(lockedAfterInactiveRetry, true);
+  assert.match(material, /fictional-backup-one/);
+  await evaluate(`document.querySelector('[data-retry]').click()`);
+  await wait(`document.querySelector('[data-two-factor-state]').textContent.startsWith('Activada:')`);
+  assert.match(await evaluate(`document.querySelector('[data-backup-codes]').textContent`), /fictional-backup-one/);
 });

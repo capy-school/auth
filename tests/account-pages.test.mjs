@@ -5,7 +5,7 @@ import { dashboardFixture } from './helpers/dashboard-fixture.mjs';
 let fixture;
 before(async () => { fixture = await dashboardFixture(); });
 after(async () => { await fixture?.close(); });
-const pages = {"security":"Seguridad","sessions":"Sesiones activas","passkey":"Passkeys","api-keys":"Claves de API"};
+const pages = {"security":"Seguridad","sessions":"Sesiones activas","passkey":"Passkeys","two-factor":"Autenticación en dos pasos","api-keys":"Claves de API"};
 for (const [page, title] of Object.entries(pages)) {
   test(`${page} uses the A shell with correct active section and title`, async () => {
     const html = await fixture.renderPage(page);
@@ -24,7 +24,7 @@ test('local passkey unavailability is explicit and does not offer a pretend regi
   assert.match(html, /no están habilitadas en este entorno/i);
   assert.doesNotMatch(html, /data-passkey-add/);
 });
-for (const path of ["/settings/security","/settings/sessions","/settings/passkey","/settings/api-keys"]) {
+for (const path of ["/settings/security","/settings/sessions","/settings/passkey","/settings/2fa","/settings/api-keys"]) {
   test(`${path} redirects anonymous requests and renders only with a session`, async () => {
     const anonymous = await fixture.renderRoute(path);
     assert.equal(anonymous.status, 302);

@@ -8,7 +8,7 @@ This commit series keeps existing authentication configuration and storage intac
 - [x] Shared shell, dashboard and active sessions
 - [x] Passkey management
 - [x] API key management
-- [ ] Server-verified two-factor management
+- [x] Server-verified two-factor management
 - [ ] Organization management
 
 Each delivered unit includes SSR, browser and isolated server-contract checks.

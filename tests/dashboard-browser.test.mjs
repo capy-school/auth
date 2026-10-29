@@ -13,7 +13,7 @@ async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
   await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if([...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
 }
-const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey","/settings/api-keys"];
+const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey","/settings/2fa","/settings/api-keys"];
 
 test('migrated account views retain the shared shell and usable mobile navigation', async () => {
   for (const width of [1440, 390, 320]) {

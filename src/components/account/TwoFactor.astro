@@ -1,0 +1,23 @@
+---
+import Feedback from './Feedback.astro';
+---
+<section class="account-manager" data-manager="two-factor" aria-label="Gestionar segundo factor">
+  <p class="account-notice" data-two-factor-state>Comprobando estado en el servidor…</p>
+  <Feedback />
+  <p class="account-notice" data-passwordless hidden>Esta cuenta accede sin contraseña. La configuración actual exige una contraseña para gestionar el segundo factor; no es posible activarlo desde aquí.</p>
+  <form class="account-form" data-two-factor-form method="post" hidden>
+    <fieldset disabled data-client-fields><legend>Configurar tu aplicación de autenticación</legend><label for="two-factor-password">Confirma tu contraseña</label><input id="two-factor-password" name="password" type="password" autocomplete="current-password" required /><button class="account-button is-primary" type="submit">Configurar segundo factor</button></fieldset>
+  </form>
+  <section class="account-secret" data-two-factor-setup hidden aria-labelledby="totp-heading">
+    <h2 id="totp-heading">Conecta tu aplicación</h2><p>Escanea el código o introduce la clave manual. La protección no se activa hasta que el servidor verifica tu código.</p>
+    <img data-totp-qr alt="Código QR para configurar tu aplicación de autenticación" width="192" height="192" hidden />
+    <p>Clave manual: <code data-totp-secret></code></p>
+    <form class="account-form" data-two-factor-verify method="post" hidden><fieldset disabled data-client-fields><legend>Verificar la configuración</legend><label for="totp-code">Código de seis dígitos</label><input id="totp-code" name="code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" required /><button class="account-button is-primary" type="submit">Verificar y activar</button></fieldset></form>
+    <button class="account-button" data-two-factor-cancel type="button">Cancelar configuración</button>
+  </section>
+  <section class="account-secret" data-backup-panel hidden aria-labelledby="backup-heading"><h2 id="backup-heading">Guarda tus códigos de recuperación</h2><p>Permiten recuperar el acceso si pierdes tu aplicación. No se guardan en este navegador. Guárdalos antes de salir de esta página.</p><ul class="account-backup-codes" data-backup-codes></ul><button class="account-button" data-backup-saved type="button">Ya los he guardado</button></section>
+  <form class="account-form" data-two-factor-disable method="post" hidden><fieldset disabled data-client-fields><legend>Desactivar segundo factor</legend><label for="two-factor-disable-password">Confirma tu contraseña</label><input id="two-factor-disable-password" name="password" type="password" autocomplete="current-password" required /><button class="account-button is-danger" type="submit">Desactivar segundo factor</button></fieldset></form>
+</section>
+<script>
+  import './two-factor';
+</script>
