@@ -1,9 +1,10 @@
 ---
 import AccountShell from './AccountShell.astro';
 import Sessions from './Sessions.astro';
+import Passkeys from './Passkeys.astro';
 import type { AccountUser } from './types';
 interface Props {
-  page: 'security' | 'sessions';
+  page: 'security' | 'sessions' | 'passkey';
   user: AccountUser;
   passkeysAvailable?: boolean;
 }
@@ -16,5 +17,7 @@ const active = page === 'sessions' ? page : 'security';
   <div class="account-page-content">
     {page === 'security' && <section class="account-security" aria-label="Métodos de acceso"><p class="account-notice">{user.emailVerified ? 'Tu correo está verificado.' : 'Tu correo no figura como verificado.'} El estado de cada método se consulta en sus ajustes.</p><div class="dashboard-settings-list">{[['/settings/passkey', 'Passkeys', 'Dispositivos y acceso sin contraseña.'], ['/settings/2fa', 'Autenticación en dos pasos', 'Estado y configuración de tu segundo factor.'], ['/settings/api-keys', 'Claves de API', 'Acceso para tus aplicaciones.'], ['/settings/sessions', 'Sesiones activas', 'Dispositivos con una sesión vigente.']].map(([href, title, description]) => <a class="dashboard-setting" {href}><span class="dashboard-setting-copy"><strong>{title}</strong><span>{description}</span></span><span aria-hidden="true">→</span></a>)}</div></section>}
     {page === 'sessions' && <Sessions />}
+    {page === 'passkey' && passkeysAvailable && <Passkeys />}
+    {page === 'passkey' && !passkeysAvailable && <p class="account-notice">Las passkeys no están habilitadas en este entorno. No se ha registrado ningún dispositivo. Puedes usar el enlace de acceso habitual.</p>}
   </div>
 </AccountShell>

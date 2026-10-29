@@ -62,6 +62,23 @@ test('real session list/revoke is user-scoped and preserves the current session'
   assert.equal((await foreign.json('/list-sessions')).length, 1);
 });
 
+test('installed passkey delete returns JSON null after deleting an owned credential', async () => {
+  const client = await login('passkey-contract@example.invalid');
+  // Enable the existing plugin only on this extra test instance and migrate
+  // only the owned temporary database. No hardware-registration claim is made.
+  const server = betterAuth({ ...instance.auth.options, plugins: [...instance.auth.options.plugins!, passkey({ rpID: 'auth.localhost', origin })] });
+  await (await getMigrations(server.options)).runMigrations();
+  const session = await instance.auth.api.getSession({ headers: client.headers() });
+  const context = await server.$context;
+  const record = await context.adapter.create<{ id: string }>({ model: 'passkey', data: { name: 'Seeded fixture credential', userId: session!.user.id, publicKey: 'unused-delete-contract-key', credentialID: 'unused-delete-contract-id', counter: 0, deviceType: 'singleDevice', backedUp: false, createdAt: new Date() } });
+  const deleted = await server.handler(new Request(`${origin}/api/auth/passkey/delete-passkey`, { method: 'POST', headers: client.headers(), body: JSON.stringify({ id: record.id }) }));
+  assert.equal(deleted.status, 200);
+  assert.equal(await deleted.json(), null);
+  const listed = await server.handler(new Request(`${origin}/api/auth/passkey/list-user-passkeys`, { headers: client.headers() }));
+  assert.equal(listed.status, 200);
+  assert.deepEqual(await listed.json(), []);
+});
+
 function totp(secret: string, time = Date.now()): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const bits = [...secret.replace(/=/g, '')].map(char => alphabet.indexOf(char.toUpperCase()).toString(2).padStart(5, '0')).join('');

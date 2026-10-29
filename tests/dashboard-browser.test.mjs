@@ -13,7 +13,7 @@ async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
   await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if([...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
 }
-const paths = ["/dashboard","/settings/security","/settings/sessions"];
+const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey"];
 
 test('migrated account views retain the shared shell and usable mobile navigation', async () => {
   for (const width of [1440, 390, 320]) {
@@ -55,4 +55,9 @@ test('keyboard users get a visible skip link and an exposed empty success region
   const { nodes } = await browser.page('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
   assert.equal(nodes[0].ignored, false);
   assert.equal(nodes[0].role.value, 'status');
+});
+test('shared unfocused fields have at least 3:1 boundary contrast', async () => {
+  await visit('/settings/passkey');
+  const ratios = await evaluate(`(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d',{willReadFrequently:true});const luminance=color=>{context.fillStyle=color;context.fillRect(0,0,1,1);const rgb=[...context.getImageData(0,0,1,1).data].slice(0,3).map(value=>{value/=255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4});return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2]};return [...document.querySelectorAll('input,select')].map(field=>{const style=getComputedStyle(field),first=luminance(style.borderTopColor),second=luminance(style.backgroundColor);return(Math.max(first,second)+.05)/(Math.min(first,second)+.05)})})()`);
+  for (const ratio of ratios) assert.ok(ratio >= 3, `boundary contrast ${ratio.toFixed(2)}:1`);
 });

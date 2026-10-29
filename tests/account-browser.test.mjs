@@ -50,6 +50,16 @@ test('failed session loads are distinct from empty and can be retried', async ()
   await visit('/settings/sessions', `window.__sessions=[];`);
   assert.equal(await evaluate(`document.querySelector('[data-empty]').hidden`), false);
 });
+test('passkeys support registration, inline rename and confirmed deletion', async () => {
+  await visit('/settings/passkey');
+  await submit('[data-passkey-form]', { name: 'Móvil' });
+  await wait(`document.querySelectorAll('.account-row').length===2`);
+  await evaluate(`document.querySelector('[data-passkey-rename]').click()`);
+  await submit('[data-passkey-rename-form]', { name: 'Portátil nuevo' });
+  await wait(`document.querySelector('.account-list').textContent.includes('Portátil nuevo')`);
+  await evaluate(`window.confirm=()=>true;document.querySelector('[data-passkey-delete]').click()`);
+  await wait(`document.querySelectorAll('.account-row').length===1`);
+});
 
 test('a failed revoke keeps the other session visible and reports no success', async () => {
   await visit('/settings/sessions', `window.__failMethod='revokeSession';`);
@@ -58,4 +68,11 @@ test('a failed revoke keeps the other session visible and reports no success', a
   assert.equal(await evaluate(`document.querySelectorAll('.account-row').length`), 2);
   assert.equal(await evaluate(`document.querySelector('[data-status]').textContent`), '');
   assert.equal(await evaluate(`document.querySelector('[data-session-revoke]').disabled`), false);
+});
+test('cancelled passkey registration preserves the draft and shows the server error', async () => {
+  await visit('/settings/passkey', `window.__failMethod='passkey.addPasskey';`);
+  await submit('[data-passkey-form]', { name: 'Sin guardar' });
+  await wait(`!document.querySelector('[data-error]').hidden`);
+  assert.equal(await evaluate(`document.querySelector('#passkey-name').value`), 'Sin guardar');
+  assert.equal(await evaluate(`document.querySelectorAll('.account-row').length`), 1);
 });

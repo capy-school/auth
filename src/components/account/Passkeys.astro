@@ -1,0 +1,19 @@
+---
+import Feedback from './Feedback.astro';
+---
+<section class="account-manager" data-manager="passkeys" aria-label="Gestionar passkeys">
+  <Feedback />
+  <form class="account-form" data-passkey-form method="post">
+    <fieldset disabled data-client-fields>
+      <legend>Añadir un dispositivo</legend>
+      <label for="passkey-name">Nombre del dispositivo</label>
+      <div class="account-form-line"><input id="passkey-name" name="name" required maxlength="100" placeholder="Por ejemplo, mi portátil" autocomplete="off" /><button class="account-button is-primary" type="submit">Añadir passkey</button></div>
+    </fieldset>
+  </form>
+  <p class="account-empty" data-empty hidden>Aún no tienes passkeys. Añade un dispositivo compatible para acceder sin contraseña.</p>
+  <ul class="account-list" data-list></ul>
+  <p class="account-hint">Tu navegador te pedirá confirmar la operación con tu dispositivo. No compartimos sus datos biométricos.</p>
+</section>
+<script>
+  import './passkeys';
+</script>
