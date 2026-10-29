@@ -60,6 +60,20 @@ test('passkeys support registration, inline rename and confirmed deletion', asyn
   await evaluate(`window.confirm=()=>true;document.querySelector('[data-passkey-delete]').click()`);
   await wait(`document.querySelectorAll('.account-row').length===1`);
 });
+test('API keys render hostile names inertly and retain one-time value after clipboard failure', async () => {
+  await visit('/settings/api-keys');
+  assert.equal(await evaluate(`document.querySelectorAll('.account-list img').length`), 0);
+  assert.match(await evaluate(`document.querySelector('.account-list').textContent`), /<img src=x/);
+  await submit('[data-api-key-form]', { name: 'Integración' });
+  await wait(`!document.querySelector('[data-new-key]').hidden`);
+  await evaluate(`Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('denied')}}});document.querySelector('[data-copy-key]').click()`);
+  await wait(`document.querySelector('[data-error]').textContent.includes('copiar')`);
+  assert.equal(await evaluate(`document.querySelector('[data-key-value]').textContent`), 'fictional-one-time-key');
+  await evaluate(`document.querySelector('[data-dismiss-key]').click()`);
+  assert.equal(await evaluate(`document.querySelector('[data-key-value]').textContent`), '');
+  await evaluate(`window.confirm=()=>true;document.querySelector('[data-key-delete]').click()`);
+  await wait(`document.querySelectorAll('.account-row').length===1`);
+});
 
 test('a failed revoke keeps the other session visible and reports no success', async () => {
   await visit('/settings/sessions', `window.__failMethod='revokeSession';`);
@@ -75,4 +89,17 @@ test('cancelled passkey registration preserves the draft and shows the server er
   await wait(`!document.querySelector('[data-error]').hidden`);
   assert.equal(await evaluate(`document.querySelector('#passkey-name').value`), 'Sin guardar');
   assert.equal(await evaluate(`document.querySelectorAll('.account-row').length`), 1);
+});
+test('failed key creation never shows a generated secret and keeps the draft', async () => {
+  await visit('/settings/api-keys', `window.__failMethod='apiKey.create';`);
+  await submit('[data-api-key-form]', { name: 'Borrador' });
+  await wait(`!document.querySelector('[data-error]').hidden`);
+  assert.equal(await evaluate(`document.querySelector('[data-new-key]').hidden`), true);
+  assert.equal(await evaluate(`document.querySelector('#api-key-name').value`), 'Borrador');
+});
+test('new API keys retain the existing one-year expiration policy', async () => {
+  await visit('/settings/api-keys');
+  await submit('[data-api-key-form]', { name: 'Integración anual' });
+  await wait(`!document.querySelector('[data-new-key]').hidden`);
+  assert.equal(await evaluate(`__calls.find(call=>call.method==='apiKey.create').arg.expiresIn`), 60 * 60 * 24 * 365);
 });

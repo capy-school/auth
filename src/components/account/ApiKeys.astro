@@ -1,0 +1,20 @@
+---
+import Feedback from './Feedback.astro';
+---
+<section class="account-manager" data-manager="api-keys" aria-label="Gestionar claves de API">
+  <p class="account-notice">Las claves dan acceso a tus aplicaciones. Guárdalas fuera de este navegador y revoca las que ya no necesites.</p>
+  <Feedback />
+  <form class="account-form" data-api-key-form method="post">
+    <fieldset disabled data-client-fields><legend>Crear una clave</legend><label for="api-key-name">Nombre de la integración</label><div class="account-form-line"><input id="api-key-name" name="name" required maxlength="100" placeholder="Por ejemplo, entorno de pruebas" autocomplete="off" /><button class="account-button is-primary" type="submit">Crear clave</button></div></fieldset>
+  </form>
+  <section class="account-secret" data-new-key hidden tabindex="-1" aria-labelledby="new-key-heading">
+    <h2 id="new-key-heading">Guarda tu nueva clave</h2><p>Solo se muestra ahora. Cópiala antes de cerrar esta sección.</p>
+    <code data-key-value></code>
+    <div class="account-actions"><button class="account-button" data-copy-key type="button">Copiar clave</button><button class="account-button is-primary" data-dismiss-key type="button">Ya la he guardado</button></div>
+  </section>
+  <p class="account-empty" data-empty hidden>Aún no tienes claves de API. Crea una solo si necesitas conectar una aplicación.</p>
+  <ul class="account-list" data-list></ul>
+</section>
+<script>
+  import './api-keys';
+</script>

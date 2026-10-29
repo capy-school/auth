@@ -7,7 +7,7 @@ This commit series keeps existing authentication configuration and storage intac
 
 - [x] Shared shell, dashboard and active sessions
 - [x] Passkey management
-- [ ] API key management
+- [x] API key management
 - [ ] Server-verified two-factor management
 - [ ] Organization management
 

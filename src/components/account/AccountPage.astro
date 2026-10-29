@@ -2,9 +2,10 @@
 import AccountShell from './AccountShell.astro';
 import Sessions from './Sessions.astro';
 import Passkeys from './Passkeys.astro';
+import ApiKeys from './ApiKeys.astro';
 import type { AccountUser } from './types';
 interface Props {
-  page: 'security' | 'sessions' | 'passkey';
+  page: 'security' | 'sessions' | 'passkey' | 'api-keys';
   user: AccountUser;
   passkeysAvailable?: boolean;
 }
@@ -19,5 +20,6 @@ const active = page === 'sessions' ? page : 'security';
     {page === 'sessions' && <Sessions />}
     {page === 'passkey' && passkeysAvailable && <Passkeys />}
     {page === 'passkey' && !passkeysAvailable && <p class="account-notice">Las passkeys no están habilitadas en este entorno. No se ha registrado ningún dispositivo. Puedes usar el enlace de acceso habitual.</p>}
+    {page === 'api-keys' && <ApiKeys />}
   </div>
 </AccountShell>

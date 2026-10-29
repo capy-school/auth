@@ -13,7 +13,7 @@ async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
   await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if([...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
 }
-const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey"];
+const paths = ["/dashboard","/settings/security","/settings/sessions","/settings/passkey","/settings/api-keys"];
 
 test('migrated account views retain the shared shell and usable mobile navigation', async () => {
   for (const width of [1440, 390, 320]) {
@@ -45,7 +45,7 @@ test('visiting account pages never reads, rewrites or removes saved notes', asyn
   assert.equal(await evaluate(`document.querySelectorAll('.account-row').length`), 2);
 });
 test('keyboard users get a visible skip link and an exposed empty success region', async () => {
-  await visit('/settings/sessions');
+  await visit('/settings/api-keys');
   await browser.page('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab' });
   await browser.page('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab' });
   assert.equal(await evaluate(`document.activeElement.className`), 'dashboard-skip');

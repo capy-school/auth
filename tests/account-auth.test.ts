@@ -62,6 +62,22 @@ test('real session list/revoke is user-scoped and preserves the current session'
   assert.equal((await foreign.json('/list-sessions')).length, 1);
 });
 
+test('API key create/list/delete uses the controller contract and preserves literal names', async () => {
+  const client = await login('keys@example.invalid');
+  const name = '<img src=x onerror=alert(1)>';
+  const before = Date.now();
+  const created = await client.json('/api-key/create', { name, expiresIn: 60 * 60 * 24 * 365 });
+  assert.equal(typeof created.key, 'string');
+  assert.ok(new Date(created.expiresAt).getTime() >= before + 365 * 24 * 60 * 60 * 1000 - 1000);
+  const keys = await client.json('/api-key/list');
+  assert.equal(keys[0].name, name);
+  assert.equal(keys[0].key, undefined);
+  await client.json('/api-key/delete', { keyId: keys[0].id });
+  assert.equal((await client.json('/api-key/list')).length, 0);
+  const defaultExpiry = await client.json('/api-key/create', { name: 'Default contract only' });
+  assert.equal(defaultExpiry.expiresAt, null, 'omitting expiresIn creates a permanent key');
+});
+
 test('installed passkey delete returns JSON null after deleting an owned credential', async () => {
   const client = await login('passkey-contract@example.invalid');
   // Enable the existing plugin only on this extra test instance and migrate
