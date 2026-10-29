@@ -39,12 +39,18 @@ test('supported non-local methods retain all six providers and explicitly disabl
   assert.doesNotMatch(html, /Open local inbox/);
 });
 
-test('local mode shows email and inbox without offering unsupported passkey, OAuth or OTP', async () => {
+test('local mode shows disabled social previews while keeping email/inbox and hiding unsupported passkey/OTP', async () => {
   const local = await loginFixture({ local: true });
   try {
     const html = await local.render();
     assert.match(html, /id="login-email"/);
     assert.match(html, /href="\/dev\/inbox"/);
-    assert.doesNotMatch(html, /data-provider=|Entrar con una passkey|Usar un código de correo/);
+    const buttons = [...html.matchAll(/<button\b[^>]*data-provider="[^"]+"[^>]*>/g)].map(match => match[0]);
+    assert.equal(buttons.length, 6);
+    assert.ok(buttons.every(button => /\bdisabled\b/.test(button)));
+    assert.match(html, /data-local-preview="true"/);
+    assert.match(html, /aria-describedby="login-local-social-note"/);
+    assert.match(html, /En modo local, estos botones son solo visuales/);
+    assert.doesNotMatch(html, /Entrar con una passkey|Usar un código de correo/);
   } finally { await local.close(); }
 });

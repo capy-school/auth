@@ -128,12 +128,17 @@ test('denied storage does not prevent a valid provider request or fall back to a
   assert.ok(await evaluate(`[...document.querySelectorAll('.providers button')].every(button=>button.disabled)`));
 });
 
-test('local mode keeps only email/inbox and retains its absolute magic-link callback', async () => {
+test('local social controls are visual-only while email/inbox retain their real local callback', async () => {
   const local = await loginFixture({ local: true });
   try {
     const origin = await local.listen();
     await visit('', '', origin);
-    assert.equal(await evaluate(`document.querySelectorAll('.providers,.passkey-button,.configuration-note').length`), 0);
+    assert.equal(await evaluate(`document.querySelectorAll('.passkey-button,.configuration-note').length`), 0);
+    assert.equal(await evaluate(`document.querySelectorAll('.providers button').length`), 6);
+    assert.ok(await evaluate(`[...document.querySelectorAll('.providers button')].every(button=>button.disabled&&getComputedStyle(button).opacity==='1'&&getComputedStyle(button).backgroundImage.startsWith('linear-gradient'))`));
+    assert.match(await evaluate(`document.querySelector('#login-local-social-note').textContent`), /solo visuales/);
+    await evaluate(`document.querySelectorAll('.providers button').forEach(button=>button.click())`);
+    assert.deepEqual(await evaluate(`__calls`), []);
     assert.equal(await evaluate(`document.querySelector('[href="/dev/inbox"]').target`), '_blank');
     await email();
     await evaluate(`document.querySelector('.email-form').requestSubmit()`);

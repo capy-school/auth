@@ -98,6 +98,7 @@
   transition: background 160ms ease-out, border-color 160ms ease-out;
 }
 .login-page .providers > button:hover:not(:disabled) { background: linear-gradient(135deg, var(--social-hover-from), var(--social-hover-to)); border-color: var(--social-hover-border, var(--social-border, var(--social-from))); }
+.login-page .providers[data-local-preview="true"] > button:disabled { opacity: 1; }
 .login-page .providers .auth-icon { width: 15px; height: 15px; }
 .login-page .providers .auth-icon > svg { width: 100%; height: 100%; }
 .login-page [data-provider="google"] {

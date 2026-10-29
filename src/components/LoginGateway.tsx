@@ -383,6 +383,7 @@ export function LoginGateway() {
   const [isHydrated, setIsHydrated] = useState(false);
   useEffect(() => { setIsHydrated(true); }, []);
   const signInDisabled = !isHydrated || errors.length > 0;
+  const socialDisabled = signInDisabled || !!localClientPolicy;
 
   return (
     <section className="portal-login" aria-labelledby="login-heading" aria-busy={!isHydrated}>
@@ -452,19 +453,20 @@ export function LoginGateway() {
         )}
 
         {localClientPolicy && <a href="/dev/inbox" target="_blank" rel="noreferrer" className="local-inbox" aria-label="Abrir bandeja local (se abre en otra pestaña)">Abrir bandeja local</a>}
-        {!localClientPolicy && <>
+        {!localClientPolicy && (
           <button type="button" className="passkey-button" onClick={handlePasskeyLogin} disabled={signInDisabled}>
             <Fingerprint aria-hidden="true" />
             <span>Entrar con una passkey</span><span className="key-corner" aria-hidden="true">↗</span>
           </button>
+        )}
           <div className="method-divider"><span>O CON TU CUENTA</span></div>
 
-          <div className="providers" role="group" aria-label="Otros métodos de acceso">
+          <div className="providers" role="group" aria-label="Otros métodos de acceso" data-local-preview={localClientPolicy ? 'true' : undefined} aria-describedby={localClientPolicy ? 'login-local-social-note' : undefined}>
             <AuthButton
               provider="google"
               icon={<GoogleIcon />}
               onClick={() => handleOAuthLogin("google")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               Google
             </AuthButton>
@@ -473,7 +475,7 @@ export function LoginGateway() {
               provider="github"
               icon={<GithubIcon />}
               onClick={() => handleOAuthLogin("github")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               GitHub
             </AuthButton>
@@ -482,7 +484,7 @@ export function LoginGateway() {
               provider="microsoft"
               icon={<MicrosoftIcon />}
               onClick={() => handleOAuthLogin("microsoft")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               Microsoft
             </AuthButton>
@@ -491,7 +493,7 @@ export function LoginGateway() {
               provider="kakao"
               icon={<KakaoIcon />}
               onClick={() => handleOAuthLogin("kakao")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               Kakao
             </AuthButton>
@@ -500,7 +502,7 @@ export function LoginGateway() {
               provider="naver"
               icon={<NaverIcon />}
               onClick={() => handleOAuthLogin("naver")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               Naver
             </AuthButton>
@@ -509,15 +511,19 @@ export function LoginGateway() {
               provider="line"
               icon={<LineIcon />}
               onClick={() => handleOAuthLogin("line")}
-              disabled={signInDisabled}
+              disabled={socialDisabled}
             >
               LINE
             </AuthButton>
           </div>
+        {localClientPolicy && (
+          <p className="field-note" id="login-local-social-note">En modo local, estos botones son solo visuales. El acceso social no está habilitado.</p>
+        )}
+        {!localClientPolicy && (
           <div className="configuration-note">
             <button type="button" disabled>Usar un código de correo</button><span>No configurado</span>
           </div>
-        </>}
+        )}
         <p className="login-footnote">Un solo lugar para volver a tus aplicaciones.</p>
     </section>
   );
