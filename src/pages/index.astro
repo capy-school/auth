@@ -1,9 +1,10 @@
 ---
-import { LoginGateway } from '../components/LoginGateway';
 import Layout from '../layouts/Layout.astro';
+import LoginPortal from '../components/login/LoginPortal.astro';
+import { LoginGateway } from '../components/LoginGateway';
 ---
-<Layout title="Login Gateway - Secure Authentication" animated>
-  <div class="container mx-auto px-4 py-8">
+<Layout title="Login Gateway - Acceso a tu cuenta" lang="es">
+  <LoginPortal>
     <LoginGateway client:load />
-  </div>
+  </LoginPortal>
 </Layout>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Mail, KeyRound, Fingerprint, Shield, Key, Clock } from "lucide-react";
+import { Mail, Fingerprint, ArrowRight } from "lucide-react";
 import { AuthButton } from "./AuthButton";
 import { getApp, isRedirectAllowed, type AppConfig } from "../lib/apps";
 import { authClient } from "../lib/auth-client";
@@ -81,18 +81,18 @@ const KakaoIcon = () => (
       y="50%"
       dominantBaseline="middle"
       textAnchor="middle"
-      fontSize="14"
+      fontSize="20"
       fontWeight="bold"
       fill="currentColor"
     >
-      kakao
+      k
     </text>
   </svg>
 );
 
 const NaverIcon = () => (
   <svg viewBox="0 0 24 24" className="w-full h-full" fill="currentColor">
-    <circle cx="12" cy="12" r="10" />
+    <path d="M3 3h6l6 9V3h6v18h-6l-6-9v9H3z" />
   </svg>
 );
 
@@ -119,7 +119,7 @@ export function LoginGateway() {
   };
 
   const [email, setEmail] = useState("");
-  const [showEmailInput, setShowEmailInput] = useState(!!localClientPolicy);
+  const [showEmailInput, setShowEmailInput] = useState(true);
   const [authMethod, setAuthMethod] = useState<
     "magiclink" | "otp" | "passkey" | null
   >(null);
@@ -379,14 +379,18 @@ export function LoginGateway() {
     }
   };
 
+  // Keep SSR controls inert until the client and query validation are ready.
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => { setIsHydrated(true); }, []);
+  const signInDisabled = !isHydrated || errors.length > 0;
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-3">
-      <div className="w-full max-w-lg bg-gray-800/50 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-gray-700">
-        {/* Errors at very top */}
+    <section className="portal-login" aria-labelledby="login-heading" aria-busy={!isHydrated}>
+        <noscript><p className="field-note">Activa JavaScript para acceder a tu cuenta.</p></noscript>
         {errors.length > 0 && (
-          <div className="mb-4 text-left text-xs text-red-400 bg-red-950/30 border border-red-700/40 rounded-md p-2">
-            <p className="font-semibold mb-1">Unable to proceed:</p>
-            <ul className="list-disc pl-5 space-y-0.5">
+          <div className="login-errors" role="alert">
+            <p>No se puede continuar:</p>
+            <ul>
               {errors.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}
@@ -394,25 +398,23 @@ export function LoginGateway() {
           </div>
         )}
 
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">Welcome Back</h1>
-          <p className="text-sm text-gray-400">
-            Sign in to your account using your preferred method
-          </p>
-          {/* App info */}
+        <div className="login-heading">
+          <p className="section-index">01 / ACCESO</p>
+          <h2 id="login-heading">Un gusto tenerte aquí.</h2>
+          <p>Elige cómo quieres continuar.</p>
           {app && errors.length === 0 && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-300">
-                Sign in to <span className="font-semibold">{app.name}</span>
+            <div className="login-app">
+              <p>
+                Acceder a <strong>{app.name}</strong>
               </p>
-              <p className="text-[11px] text-gray-400">{app.description}</p>
+              <p>{app.description}</p>
               {redirectUrl &&
                 (() => {
                   try {
                     const o = new URL(redirectUrl).origin;
                     return (
-                      <p className="text-[11px] text-gray-500">
-                        Destination: {o}
+                      <p className="login-destination">
+                        Destino: {o}
                       </p>
                     );
                   } catch {
@@ -423,92 +425,46 @@ export function LoginGateway() {
           )}
         </div>
 
-        {/* Passwordless Methods */}
-        <div className="space-y-2.5 mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-              Passwordless
-            </h2>
-            {/* {supportsConditionalUI && (
-              <span className="text-[10px] text-green-400 flex items-center gap-1">
-                <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full"></span>
-                Autofill Ready
-              </span>
-            )} */}
-          </div>
-
-          {!localClientPolicy && <AuthButton
-            provider="passkey"
-            icon={<Fingerprint />}
-            onClick={handlePasskeyLogin}
-            className={
-              errors.length ? "opacity-50 pointer-events-none" : undefined
-            }
-          >
-            Sign in with Passkey
-          </AuthButton>}
-
-          {!showEmailInput && (
-            <AuthButton
-              provider="email"
-              icon={<Mail />}
-              onClick={() => setShowEmailInput(true)}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
-            >
-              Sign in with Email
-            </AuthButton>
-          )}
-
-          {showEmailInput && (
-            <div className="space-y-2.5">
+        {showEmailInput && (
+          <form className="email-form" method="post" onSubmit={(event) => { event.preventDefault(); void handleMagicLink(); }}>
+            <label htmlFor="login-email">Correo electrónico</label>
+            <div className="email-field">
+              <Mail aria-hidden="true" />
               <input
+                id="login-email"
+                name="email"
                 type="email"
-                aria-label="Email address"
-                placeholder="Enter your email"
+                placeholder="nombre@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email webauthn"
-                className="w-full px-3 py-2 rounded-lg bg-gray-700/50 border border-gray-600 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                aria-describedby="login-email-note"
+                spellCheck={false}
+                disabled={!isHydrated}
+                required
               />
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleMagicLink}
-                  disabled={errors.length > 0}
-                  className={`px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 ${errors.length ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <Key className="w-4 h-4" />
-                  Magic Link
-                </button>
-                {!localClientPolicy && <button
-                  onClick={handleEmailOTP}
-                  disabled={errors.length > 0}
-                  className={`px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 ${errors.length ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <KeyRound className="w-4 h-4" />
-                  Email OTP
-                </button>}
-              </div>
             </div>
-          )}
-        </div>
+            <button type="submit" disabled={signInDisabled} className="primary-button">
+              <span>Continuar con correo</span><ArrowRight aria-hidden="true" />
+            </button>
+            <p className="field-note" id="login-email-note">Recibe un enlace para entrar sin contraseña.</p>
+          </form>
+        )}
 
-        {/* OAuth Providers */}
-        {localClientPolicy && <a href="/dev/inbox" target="_blank" rel="noreferrer" className="text-purple-300 underline">Open local inbox</a>}
-        {!localClientPolicy && <div className="space-y-2.5">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            OAuth Providers
-          </h2>
+        {localClientPolicy && <a href="/dev/inbox" target="_blank" rel="noreferrer" className="local-inbox" aria-label="Abrir bandeja local (se abre en otra pestaña)">Abrir bandeja local</a>}
+        {!localClientPolicy && <>
+          <button type="button" className="passkey-button" onClick={handlePasskeyLogin} disabled={signInDisabled}>
+            <Fingerprint aria-hidden="true" />
+            <span>Entrar con una passkey</span><span className="key-corner" aria-hidden="true">↗</span>
+          </button>
+          <div className="method-divider"><span>O CON TU CUENTA</span></div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="providers" role="group" aria-label="Otros métodos de acceso">
             <AuthButton
               provider="google"
               icon={<GoogleIcon />}
               onClick={() => handleOAuthLogin("google")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
               Google
             </AuthButton>
@@ -517,9 +473,7 @@ export function LoginGateway() {
               provider="github"
               icon={<GithubIcon />}
               onClick={() => handleOAuthLogin("github")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
               GitHub
             </AuthButton>
@@ -528,9 +482,7 @@ export function LoginGateway() {
               provider="microsoft"
               icon={<MicrosoftIcon />}
               onClick={() => handleOAuthLogin("microsoft")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
               Microsoft
             </AuthButton>
@@ -539,9 +491,7 @@ export function LoginGateway() {
               provider="kakao"
               icon={<KakaoIcon />}
               onClick={() => handleOAuthLogin("kakao")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
               Kakao
             </AuthButton>
@@ -550,9 +500,7 @@ export function LoginGateway() {
               provider="naver"
               icon={<NaverIcon />}
               onClick={() => handleOAuthLogin("naver")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
               Naver
             </AuthButton>
@@ -561,29 +509,16 @@ export function LoginGateway() {
               provider="line"
               icon={<LineIcon />}
               onClick={() => handleOAuthLogin("line")}
-              className={
-                errors.length ? "opacity-50 pointer-events-none" : undefined
-              }
+              disabled={signInDisabled}
             >
-              Line
+              LINE
             </AuthButton>
           </div>
-        </div>}
-
-        {/* Additional Info */}
-        <div className="mt-6 pt-4 border-t border-gray-700">
-          <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" />
-              <span>2FA Protected</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Session Management</span>
-            </div>
+          <div className="configuration-note">
+            <button type="button" disabled>Usar un código de correo</button><span>No configurado</span>
           </div>
-        </div>
-      </div>
-    </div>
+        </>}
+        <p className="login-footnote">Un solo lugar para volver a tus aplicaciones.</p>
+    </section>
   );
 }

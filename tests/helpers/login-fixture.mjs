@@ -30,7 +30,7 @@ export async function loginFixture({ local = false } = {}) {
   const vite = await createViteServer(config);
   let http;
   try {
-    const Page = (await vite.ssrLoadModule('/src/components/login/LoginPortal.astro')).default;
+    const Page = (await vite.ssrLoadModule('/src/pages/index.astro')).default;
     const { experimental_AstroContainer } = await vite.ssrLoadModule('astro/container');
     const { default: renderer } = await vite.ssrLoadModule('@astrojs/react/server.js');
     const container = await experimental_AstroContainer.create();

@@ -6,6 +6,7 @@ interface AuthButtonProps {
   icon?: React.ReactNode;
   onClick?: () => void;
   className?: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -23,16 +24,19 @@ const providerStyles: Record<string, string> = {
   passkey: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white',
 };
 
-export function AuthButton({ provider, icon, onClick, className, children }: AuthButtonProps) {
+export function AuthButton({ provider, icon, onClick, className, disabled = false, children }: AuthButtonProps) {
   const baseStyles = 'w-full px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg';
   const providerStyle = providerStyles[provider.toLowerCase()] || 'bg-gray-700 hover:bg-gray-800 text-white';
 
   return (
     <button
+      type="button"
+      data-provider={provider.toLowerCase()}
+      disabled={disabled}
       onClick={onClick}
       className={cn(baseStyles, providerStyle, className)}
     >
-      {icon && <span className="auth-icon w-4 h-4 shrink-0">{icon}</span>}
+      {icon && <span className="auth-icon w-4 h-4 shrink-0" aria-hidden="true">{icon}</span>}
       {children}
     </button>
   );
