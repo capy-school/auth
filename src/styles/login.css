@@ -1,0 +1,213 @@
+/* Approved portal A. All rules stay within the login, never the account shell. */
+.login-page {
+  --ink: oklch(94% .009 255);
+  --muted: oklch(70% .022 260);
+  --dim: oklch(68% .018 260);
+  --line: oklch(35% .025 260);
+  --field-border: oklch(58% .023 260);
+  --mint: oklch(83% .095 173);
+  --paper: oklch(16% .027 262);
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow: clip;
+  color-scheme: dark;
+  color: var(--ink);
+  background: var(--paper);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+.login-page :is(h1, h2, p) { margin: 0; }
+.login-page :is(button, input) { font: inherit; color: inherit; }
+.login-page :is(button, input, a) { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.login-page button { cursor: pointer; }
+.login-page button:disabled { cursor: not-allowed; opacity: .55; }
+.login-page a { color: inherit; text-decoration: none; }
+.login-page :is(button, a, input):focus-visible { outline: 2px solid var(--mint); outline-offset: 5px; }
+.login-page :is(button, a, input) { scroll-margin-block: 24px; }
+.login-page svg { width: 20px; height: 20px; flex-shrink: 0; }
+.login-page .login-skip { position: fixed; z-index: 10; top: 12px; left: 20px; transform: translateY(-160%); padding: 12px 18px; border-radius: 6px; background: var(--mint); color: var(--paper); }
+.login-page .login-skip:focus { transform: none; }
+.login-page .login-masthead { position: relative; z-index: 2; display: flex; align-items: center; gap: 30px; max-width: 1440px; margin: 0 auto; padding: 38px 64px; }
+.login-page .login-brand { display: inline-flex; align-items: center; gap: 11px; width: fit-content; font-size: 16px; font-weight: 650; letter-spacing: -.035em; }
+.login-page .brand-light { font-weight: 400; color: oklch(78% .014 258); }
+.login-page .brand-symbol { display: grid; place-items: center; width: 34px; height: 36px; color: var(--mint); }
+.login-page .brand-symbol svg { width: 30px; height: 30px; }
+.login-page .header-caption { color: var(--dim); font-size: 11px; border-left: 1px solid var(--line); padding-left: 27px; }
+.login-page .portal-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse at 10% 3%, oklch(28% .07 267 / .5), transparent 44%),
+    radial-gradient(ellipse at 93% 25%, oklch(27% .065 288 / .36), transparent 42%),
+    radial-gradient(ellipse at 27% 92%, oklch(29% .045 190 / .25), transparent 46%), var(--paper);
+}
+.login-page .portal-atmosphere::after { content: ""; position: absolute; inset: 10% 28% 4% 2%; background: radial-gradient(ellipse at 45% 65%, oklch(39% .055 214 / .2), transparent 60%); animation: login-atmosphere 18s cubic-bezier(.22, 1, .36, 1) infinite alternate; }
+.login-page .portal-main { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(360px, .85fr); gap: 80px; align-items: center; max-width: 1250px; min-height: calc(100svh - 112px); margin: 0 auto; padding: 32px 50px 88px; }
+.login-page .portal-story { position: relative; align-self: stretch; min-height: 640px; padding-top: 23px; }
+.login-page .login-eyebrow { display: flex; align-items: center; gap: 9px; font-size: 9px; font-weight: 600; letter-spacing: .18em; color: var(--muted); }
+.login-page .login-eyebrow > span { width: 17px; height: 1px; background: var(--mint); opacity: .65; }
+.login-page .portal-story h1 { position: relative; z-index: 1; margin-top: 24px; font-size: 70px; line-height: 1.08; font-weight: 500; letter-spacing: -.065em; }
+.login-page .story-copy { position: relative; z-index: 1; margin-top: 23px; max-width: 38ch; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.login-page .portal-art { position: absolute; z-index: -1; top: 224px; left: -45px; width: 570px; height: 481px; pointer-events: none; }
+.login-page .portal-art > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.login-page .portal-bloom { animation: login-aperture 13s ease-in-out infinite alternate; }
+.login-page .story-footnote { position: absolute; bottom: 10px; left: 0; display: flex; align-items: center; gap: 13px; font-size: 8px; letter-spacing: .2em; color: var(--dim); }
+.login-page .story-footnote > span { width: 30px; height: 1px; background: oklch(53% .035 220); }
+.login-page .portal-login { position: relative; justify-self: end; width: 100%; max-width: 408px; min-width: 0; padding-top: 15px; }
+.login-page .login-heading { margin-bottom: 30px; }
+.login-page .section-index { color: var(--mint); font-size: 9px; letter-spacing: .16em; font-weight: 500; }
+.login-page .login-heading h2 { margin-top: 13px; font-size: 28px; font-weight: 550; line-height: 1.25; letter-spacing: -.04em; }
+.login-page .login-heading > p:last-of-type { margin-top: 9px; font-size: 13px; color: var(--muted); }
+.login-page .email-form label { display: block; margin-bottom: 9px; font-size: 12px; font-weight: 550; color: oklch(85% .012 255); }
+.login-page .email-field { display: flex; align-items: center; gap: 11px; padding: 0 14px; border: 1px solid var(--field-border); border-radius: 9px; background: oklch(20% .026 262); transition: border-color 160ms ease-out, background 160ms ease-out; }
+.login-page .email-field > svg { width: 17px; height: 17px; color: var(--muted); }
+.login-page .email-field:focus-within { border-color: var(--mint); background: oklch(22% .028 257); outline: 2px solid var(--mint); outline-offset: 3px; }
+.login-page input { min-width: 0; width: 100%; height: 49px; padding: 0; border: 0; background: transparent; font-size: 13px; border-radius: 8px; }
+.login-page .email-field input:focus-visible { outline: none; }
+.login-page input::placeholder { color: var(--dim); opacity: 1; }
+.login-page .primary-button { display: flex; align-items: center; justify-content: space-between; gap: 13px; width: 100%; min-height: 48px; margin-top: 11px; padding: 13px 17px; border: 1px solid oklch(87% .052 175); border-radius: 8px; color: oklch(23% .026 205); background: oklch(87% .052 175); font-size: 13px; font-weight: 650; transition: background 160ms ease-out, border-color 160ms ease-out; }
+.login-page .primary-button:hover:not(:disabled) { background: oklch(93% .035 175); border-color: oklch(93% .035 175); }
+.login-page .primary-button:active:not(:disabled) { background: oklch(79% .075 175); }
+.login-page .primary-button svg { width: 18px; height: 18px; }
+.login-page .field-note { margin-top: 10px; color: var(--dim); font-size: 11px; line-height: 1.7; }
+.login-page .passkey-button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 47px; margin-top: 23px; padding: 12px 14px; border: 1px solid var(--field-border); border-radius: 8px; background: oklch(24% .026 262); color: var(--ink); font-size: 12px; transition: background 160ms ease-out, border-color 160ms ease-out; }
+.login-page .passkey-button:hover:not(:disabled) { background: oklch(29% .028 262); border-color: oklch(70% .023 260); }
+.login-page .passkey-button svg { width: 18px; height: 18px; color: var(--mint); }
+.login-page .key-corner { margin-left: auto; color: var(--muted); font-size: 15px; }
+.login-page .method-divider { display: flex; align-items: center; gap: 15px; margin: 25px 0 18px; color: var(--dim); font-size: 8px; letter-spacing: .13em; white-space: nowrap; }
+.login-page .method-divider::before, .login-page .method-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); opacity: .75; }
+.login-page .providers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.login-page .providers > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 7px;
+  border: 1px solid var(--social-border, var(--social-from));
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--social-from), var(--social-to));
+  color: var(--social-ink, oklch(98% .005 255));
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background 160ms ease-out, border-color 160ms ease-out;
+}
+.login-page .providers > button:hover:not(:disabled) { background: linear-gradient(135deg, var(--social-hover-from), var(--social-hover-to)); border-color: var(--social-hover-border, var(--social-border, var(--social-from))); }
+.login-page .providers .auth-icon { width: 15px; height: 15px; }
+.login-page .providers .auth-icon > svg { width: 100%; height: 100%; }
+.login-page [data-provider="google"] {
+  --social-from: oklch(54.6% .245 262.881);
+  --social-to: oklch(48.8% .243 264.376);
+  --social-hover-from: oklch(48.8% .243 264.376);
+  --social-hover-to: oklch(45% .215 264.376);
+  --social-border: oklch(62.3% .214 259.815);
+  --social-hover-border: oklch(68% .18 259.815);
+}
+.login-page [data-provider="github"] {
+  --social-from: oklch(27.8% .033 256.848);
+  --social-to: oklch(21% .034 264.665);
+  --social-hover-from: oklch(21% .034 264.665);
+  --social-hover-to: oklch(10% .012 264);
+  --social-border: var(--field-border);
+  --social-hover-border: oklch(70% .023 260);
+}
+.login-page [data-provider="microsoft"] {
+  --social-from: oklch(37.3% .034 259.733);
+  --social-to: oklch(27.8% .033 256.848);
+  --social-hover-from: oklch(27.8% .033 256.848);
+  --social-hover-to: oklch(21% .034 264.665);
+  --social-border: var(--field-border);
+  --social-hover-border: oklch(70% .023 260);
+}
+.login-page [data-provider="kakao"] {
+  --social-from: oklch(85.2% .199 91.936);
+  --social-to: oklch(79.5% .184 86.047);
+  --social-hover-from: oklch(79.5% .184 86.047);
+  --social-hover-to: oklch(68.1% .162 75.834);
+  --social-ink: oklch(21% .034 264.665);
+}
+.login-page [data-provider="naver"] {
+  --social-from: oklch(79.2% .209 151.711);
+  --social-to: oklch(72.3% .219 149.579);
+  --social-hover-from: oklch(72.3% .219 149.579);
+  --social-hover-to: oklch(62.7% .194 149.214);
+  --social-ink: oklch(21% .034 264.665);
+}
+.login-page [data-provider="line"] {
+  --social-from: oklch(72.3% .219 149.579);
+  --social-to: oklch(62.7% .194 149.214);
+  --social-hover-from: oklch(67% .2 149.214);
+  --social-hover-to: oklch(61% .185 149.214);
+  --social-ink: oklch(21% .034 264.665);
+}
+.login-page .configuration-note { display: flex; align-items: center; gap: 7px; margin-top: 16px; color: var(--dim); }
+.login-page .configuration-note > button { border: 0; padding: 4px 0; background: transparent; color: var(--dim); font-size: 10px; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+.login-page .configuration-note > span { border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; font-size: 9px; }
+.login-page .login-footnote { margin-top: 25px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 11px; }
+.login-page .login-errors { margin-bottom: 24px; padding: 14px; border: 1px solid oklch(64% .13 23); border-radius: 8px; background: oklch(23% .04 23); color: oklch(89% .045 23); font-size: 12px; overflow-wrap: anywhere; }
+.login-page .login-errors > p { font-weight: 650; }
+.login-page .login-errors ul { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
+.login-page .login-app { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.login-page .login-app > p + p { margin-top: 5px; }
+.login-page .login-app strong { color: var(--ink); font-weight: 600; }
+.login-page .login-destination { font-size: 11px; }
+.login-page .local-inbox { display: inline-block; margin-top: 20px; padding-block: 8px; color: var(--mint); font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+@keyframes login-atmosphere { from { opacity: .45; transform: translate3d(-8px, -4px, 0); } to { opacity: 1; transform: translate3d(9px, 7px, 0); } }
+@keyframes login-aperture { from { opacity: .25; } to { opacity: .5; } }
+@media (min-width: 1550px) {
+  .login-page .portal-main { max-width: 1390px; gap: 130px; }
+  .login-page .portal-story h1 { font-size: 80px; }
+  .login-page .portal-art { top: 244px; left: -22px; }
+}
+@media (max-width: 1100px) {
+  .login-page .portal-main { gap: 35px; padding-inline: 38px; grid-template-columns: minmax(0, 1fr) minmax(340px, .9fr); }
+  .login-page .portal-story h1 { font-size: 56px; }
+  .login-page .portal-art { width: 510px; left: -74px; top: 227px; }
+  .login-page .login-masthead { padding-inline: 38px; }
+  .login-page .header-caption { display: none; }
+}
+@media (max-width: 800px) {
+  .login-page .portal-main { max-width: 640px; grid-template-columns: minmax(0, 1fr); min-height: auto; gap: 32px; padding: 5px 40px 70px; }
+  .login-page .portal-story { padding-top: 12px; min-height: 0; }
+  .login-page .portal-story h1 { margin-top: 18px; font-size: 42px; }
+  .login-page .portal-story h1 br { display: none; }
+  .login-page .story-copy { margin-top: 14px; font-size: 13px; }
+  .login-page .story-copy br { display: none; }
+  .login-page .portal-art { width: 470px; left: 180px; top: -160px; opacity: .17; }
+  .login-page .story-footnote { display: none; }
+  .login-page .portal-login { max-width: none; padding-top: 0; justify-self: stretch; }
+  .login-page .login-heading { margin-bottom: 25px; }
+  .login-page .login-heading h2 { font-size: 24px; }
+  .login-page .login-eyebrow { font-size: 8px; }
+  .login-page .login-masthead { padding: 30px 40px; }
+}
+@media (max-width: 480px) {
+  .login-page .login-masthead { padding: 28px 25px 25px; }
+  .login-page .login-brand { font-size: 14px; gap: 8px; }
+  .login-page .brand-symbol { width: 28px; height: 30px; }
+  .login-page .brand-symbol svg { width: 27px; height: 27px; }
+  .login-page .portal-main { padding: 6px 25px 65px; gap: 30px; }
+  .login-page .portal-story h1 { max-width: 300px; margin-top: 15px; font-size: 37px; line-height: 1.1; }
+  .login-page .portal-story h1 br { display: block; }
+  .login-page .story-copy { max-width: 34ch; font-size: 12px; }
+  .login-page .portal-art { width: 410px; height: 346px; top: -82px; left: 110px; opacity: .24; }
+  .login-page .login-heading { margin-bottom: 24px; }
+  .login-page .login-heading h2 { margin-top: 10px; font-size: 24px; }
+  .login-page .section-index { font-size: 8px; }
+  .login-page .providers { gap: 7px; }
+  .login-page .providers > button { gap: 5px; padding-inline: 4px; }
+  .login-page .providers .auth-icon { width: 13px; height: 13px; }
+}
+@media (max-width: 350px) {
+  .login-page .portal-main, .login-page .login-masthead { padding-inline: 20px; }
+  .login-page .portal-story h1 { font-size: 33px; }
+  .login-page .login-heading h2 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-page *, .login-page *::before, .login-page *::after { animation: none !important; transition: none !important; }
+}

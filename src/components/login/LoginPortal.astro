@@ -1,0 +1,51 @@
+---
+import '../../styles/login.css';
+---
+<div class="login-page">
+  <a class="login-skip" href="#login-email">Ir al acceso</a>
+  <div class="portal-atmosphere" aria-hidden="true"></div>
+  <header class="login-masthead">
+    <a class="login-brand" href="/" aria-label="Login Gateway, inicio">
+      <span class="brand-symbol" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M7 27V13a9 9 0 0 1 18 0v14M12 27V13a4 4 0 0 1 8 0v14M4 27h11m5 0h8" /></svg>
+      </span>
+      <span>Login<span class="brand-light"> Gateway</span></span>
+    </a>
+    <span class="header-caption">Un punto de entrada. Tu espacio.</span>
+  </header>
+  <main class="portal-main">
+    <div class="portal-story">
+      <p class="login-eyebrow"><span aria-hidden="true"></span>HECHO PARA VOLVER</p>
+      <h1>Tus espacios.<br />Un solo acceso.</h1>
+      <p class="story-copy">Lo que necesitas está al otro lado. <br />Entra a tu cuenta y sigue donde lo dejaste.</p>
+      <div class="portal-art" aria-hidden="true">
+        <svg viewBox="0 0 640 540" fill="none">
+          <defs>
+            <linearGradient id="login-frame-light" x1="130" y1="400" x2="470" y2="65" gradientUnits="userSpaceOnUse">
+              <stop stop-color="oklch(81% .12 173)" /><stop offset=".45" stop-color="oklch(75% .13 231)" /><stop offset="1" stop-color="oklch(75% .16 292)" />
+            </linearGradient>
+            <linearGradient id="login-opening" x1="300" y1="90" x2="310" y2="480" gradientUnits="userSpaceOnUse">
+              <stop stop-color="oklch(21% .045 266)" /><stop offset="1" stop-color="oklch(14% .023 255)" />
+            </linearGradient>
+            <radialGradient id="login-floor-light">
+              <stop stop-color="oklch(65% .1 190)" stop-opacity=".35" /><stop offset="1" stop-color="oklch(40% .05 240)" stop-opacity="0" />
+            </radialGradient>
+            <filter id="login-light-bloom" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="20" /></filter>
+            <filter id="login-close-bloom" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="4" /></filter>
+          </defs>
+          <ellipse cx="310" cy="480" rx="265" ry="54" fill="url(#login-floor-light)" />
+          <path d="M205 104 414 57q12-3 12 11v360q0 12-12 15l-209 47q-12 3-12-11V120q0-13 12-16Z" stroke="oklch(48% .045 258)" stroke-opacity=".18" />
+          <path class="portal-bloom" d="m184 106 209-47q12-3 12 11v360q0 12-12 15l-209 47q-12 3-12-11V122q0-13 12-16Z" stroke="url(#login-frame-light)" stroke-width="38" opacity=".42" filter="url(#login-light-bloom)" />
+          <path d="m184 106 209-47q12-3 12 11v360q0 12-12 15l-209 47q-12 3-12-11V122q0-13 12-16Z" fill="url(#login-opening)" />
+          <path d="m184 106 209-47q12-3 12 11v360q0 12-12 15l-209 47q-12 3-12-11V122q0-13 12-16Z" stroke="url(#login-frame-light)" stroke-width="6" opacity=".45" filter="url(#login-close-bloom)" />
+          <path d="m184 106 209-47q12-3 12 11v360q0 12-12 15l-209 47q-12 3-12-11V122q0-13 12-16Z" stroke="url(#login-frame-light)" stroke-width="1.6" />
+          <path d="m188 115 204-46q4-1 4 5v353q0 5-5 6l-203 46q-5 1-5-4V122q0-6 5-7Z" stroke="oklch(69% .07 230)" stroke-opacity=".16" />
+          <path d="m173 483-55 48m282-96 80 62" stroke="oklch(65% .075 205)" stroke-opacity=".09" />
+          <path d="m333 286 19-4" stroke="oklch(80% .07 200)" stroke-opacity=".4" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </div>
+      <p class="story-footnote"><span aria-hidden="true"></span>TU CUENTA, A TU MANERA</p>
+    </div>
+    <slot />
+  </main>
+</div>
