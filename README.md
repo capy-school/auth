@@ -202,6 +202,22 @@ fail rather than silently skip without it. Rebuild with `npm run kit:build` afte
 using the diagnostic build before testing production files. Passing static tests
 does not by itself establish browser acceptance, TLS proxy behavior or CDN HIT rates.
 
+### CI
+
+The GitHub Actions workflow `.github/workflows/ci.yml` validates the frontend in
+its own Docker image (`docker/ci/Dockerfile`). It runs on pushes to `railway`,
+pull requests and manual dispatch, and does not publish images or deploy.
+
+The container receives no application variables or secrets. Only `CI=true` and
+`TZ=UTC` are declared explicitly; there is no `--env-file` or implicit host
+environment passthrough.
+
+```bash
+docker build -f docker/ci/Dockerfile -t auth-ci:local .
+docker run --rm --cap-drop ALL --security-opt no-new-privileges \
+  --network none -e CI=true -e TZ=UTC auth-ci:local
+```
+
 ## 🎯 Usage Examples
 
 ### Client-Side Authentication

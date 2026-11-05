@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [railway]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate in Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        # actions/checkout v4, pinned by commit.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Build CI image
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: docker build --pull --file docker/ci/Dockerfile --tag "auth-ci:${GITHUB_SHA}" .
+
+      - name: Validate with only declared environment
+        run: |
+          docker run --rm \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --network none \
+            --env CI=true \
+            --env TZ=UTC \
+            "auth-ci:${GITHUB_SHA}"
+
+      - name: Prove host environment is not inherited
+        run: |
+          SENTINEL_CI_SECRET=do-not-leak docker run --rm \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --network none \
+            --entrypoint sh \
+            "auth-ci:${GITHUB_SHA}" \
+            -c 'test -z "${SENTINEL_CI_SECRET:-}" && test -z "${API_UPSTREAM:-}"'
