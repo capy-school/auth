@@ -8,7 +8,7 @@ function deviceLabel(agent: string | null | undefined): string {
   return system ? `${browser} · ${system}` : browser;
 }
 
-mount('[data-manager="sessions"]', async root => {
+async function initializeSessions(root: HTMLElement) {
   const ui = accountUI(root);
   const list = root.querySelector<HTMLElement>('[data-list]')!;
   const empty = root.querySelector<HTMLElement>('[data-empty]')!;
@@ -48,4 +48,10 @@ mount('[data-manager="sessions"]', async root => {
   }
   ui.retry(load);
   await load();
-});
+}
+
+export function mountSessions(root?: HTMLElement): void {
+  mount('[data-manager="sessions"]', initializeSessions, root);
+}
+
+mountSessions();

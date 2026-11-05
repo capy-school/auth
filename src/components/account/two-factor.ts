@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import { authClient } from '../../lib/auth-client';
 import { accountUI, data, element, mount } from './ui';
 
-mount('[data-manager="two-factor"]', async root => {
+async function initializeTwoFactor(root: HTMLElement) {
   const ui = accountUI(root);
   const state = root.querySelector<HTMLElement>('[data-two-factor-state]')!;
   const setup = root.querySelector<HTMLElement>('[data-two-factor-setup]')!;
@@ -135,4 +135,10 @@ mount('[data-manager="two-factor"]', async root => {
     backups.replaceChildren(); backupPanel.hidden = true;
   });
   ui.retry(load); await load();
-});
+}
+
+export function mountTwoFactor(root?: HTMLElement): void {
+  mount('[data-manager="two-factor"]', initializeTwoFactor, root);
+}
+
+mountTwoFactor();

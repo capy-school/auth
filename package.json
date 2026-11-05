@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "PORTLESS_HTTPS=0 portless auth astro dev",
+    "dev:api": "astro dev --host 127.0.0.1 --port 4321",
     "dev:setup": "tsx scripts/setup-local.ts",
     "test:local": "node --import tsx --test tests/local-*.test.*",
     "build": "node scripts/build-cf.mjs",
@@ -15,9 +16,16 @@
     "db:migrate": "@better-auth/cli migrate",
     "db:seed": "tsx src/db/seed.ts",
     "kit:dev": "vite --config vite.sveltekit.config.ts",
+    "kit:dev:local": "PUBLIC_KIT_AUTH_LOCAL_MODE=1 PORTLESS_HTTPS=0 portless auth vite --config vite.sveltekit.config.ts",
+    "kit:diagnostic:dev": "KIT_DIAGNOSTICS=1 vite --config vite.sveltekit.config.ts",
+    "kit:diagnostic:build": "KIT_DIAGNOSTICS=1 vite build --config vite.sveltekit.config.ts",
     "kit:check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.sveltekit.json",
     "kit:build": "vite build --config vite.sveltekit.config.ts",
-    "kit:test": "node --test tests/kit-config.test.mjs"
+    "kit:test": "node --test tests/kit-config.test.mjs",
+    "test:kit:app": "node --import tsx --test --test-concurrency=1 tests/kit-app-*.test.*",
+    "image:build": "docker build --target tiny -t auth-static:local .",
+    "preimage:test": "docker build --target test-api -t auth-static:test-api .",
+    "image:test": "AUTH_STATIC_IMAGE=auth-static:local AUTH_STATIC_FIXTURE=0 node --test --test-concurrency=1 tests/static-image*.test.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.13",

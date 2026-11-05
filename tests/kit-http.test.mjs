@@ -127,8 +127,8 @@ test('static build JSON is a non-sensitive marker, not a runtime health check', 
   });
 });
 
-test('candidate does not expose root login or proxy the existing authentication API', async () => {
-  for (const path of ['/', '/api/auth/get-session']) {
+test('opt-in diagnostics do not expose production login, account routes or a real authentication API', async () => {
+  for (const path of ['/', '/dashboard/', '/settings/security/', '/api/auth/get-session']) {
     const response = await request(path);
     assert.equal(response.status, 404, path);
     assert.equal(response.headers.get('set-cookie'), null);

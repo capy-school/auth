@@ -41,9 +41,9 @@ const labels = (html) => buttons(html).map(([, , content]) => content.replace(/<
 
 // SSR and source seams do not prove native validation, events, confirmation or mobile geometry.
 test('fictional preview renders the original container with empty list and no initial requests', async () => {
-  assert.ok(existsSync(new URL('../src/kit/routes/__migration/api-keys/+page.svelte', import.meta.url)),
+  assert.ok(existsSync(new URL('../src/kit/diagnostic-routes/__migration/api-keys/+page.svelte', import.meta.url)),
     'The fictional API-key list/create preview is absent');
-  const Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/api-keys/+page.svelte')).default;
+  const Preview = (await server.ssrLoadModule('/src/kit/diagnostic-routes/__migration/api-keys/+page.svelte')).default;
   const { body: html, head } = render(Preview);
   assert.match(head, /name="robots" content="noindex"/);
   assert.match(html, /container mx-auto px-4 py-8/);
@@ -149,7 +149,7 @@ test('component and preview retain controlled raw requests, caller confirmation 
   assert.match(component, /event\.preventDefault\(\);\s*if \(!name\.trim\(\)\) return;\s*onCreateRequest\(name\);/);
   assert.match(component, /onclick=\{\(\) => onRevokeRequest\(row\.id\)\}/);
   assert.doesNotMatch(component, /\{@html|\$state|\$effect|bind:|confirm|new Date|Date\.|keyValue|secret|import\b|disabled|novalidate|minlength|pattern=/);
-  const preview = source('src/kit/routes/__migration/api-keys/+page.svelte');
+  const preview = source('src/kit/diagnostic-routes/__migration/api-keys/+page.svelte');
   assert.match(preview, /if \(!window\.confirm\('Revoke this API key\? This action cannot be undone\.'\)\) return;\s*request = \{ action: 'Revoke', id \};/);
   assert.match(preview, /onCreateRequest=\{\(rawName\) => \{ request = \{ action: 'Create', rawName \}; \}\}/);
   assert.match(preview, /onNameChange=\{\(raw\) => \{ name = raw; \}\}/);

@@ -146,7 +146,7 @@ test('display row text can shrink and wrap without forcing Rename and Delete out
 
 // SSR covers states only; independent browser acceptance verifies raw callbacks and rename focus.
 test('preview starts empty with visible transient fixtures and a disconnected fictional-data disclaimer', async () => {
-  const Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/passkeys/+page.svelte')).default;
+  const Preview = (await server.ssrLoadModule('/src/kit/diagnostic-routes/__migration/passkeys/+page.svelte')).default;
   const { body: html, head } = render(Preview);
   assert.match(head, /<title>Passkey management preview<\/title>/);
   assert.match(head, /name="robots" content="noindex"/);

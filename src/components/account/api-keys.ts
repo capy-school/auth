@@ -1,7 +1,7 @@
 import { authClient } from '../../lib/auth-client';
 import { accountUI, action, data, dateLabel, element, mount } from './ui';
 
-mount('[data-manager="api-keys"]', async root => {
+async function initializeApiKeys(root: HTMLElement) {
   const ui = accountUI(root);
   const list = root.querySelector<HTMLElement>('[data-list]')!;
   const empty = root.querySelector<HTMLElement>('[data-empty]')!;
@@ -48,4 +48,10 @@ mount('[data-manager="api-keys"]', async root => {
     value.textContent = ''; panel.hidden = true; create.disabled = false; name.focus();
   });
   ui.retry(load); await load();
-});
+}
+
+export function mountApiKeys(root?: HTMLElement): void {
+  mount('[data-manager="api-keys"]', initializeApiKeys, root);
+}
+
+mountApiKeys();

@@ -1,7 +1,7 @@
 import { authClient } from '../../lib/auth-client';
 import { accountUI, action, data, dateLabel, element, mount } from './ui';
 
-mount('[data-manager="passkeys"]', async root => {
+async function initializePasskeys(root: HTMLElement) {
   const ui = accountUI(root);
   const list = root.querySelector<HTMLElement>('[data-list]')!;
   const empty = root.querySelector<HTMLElement>('[data-empty]')!;
@@ -66,4 +66,10 @@ mount('[data-manager="passkeys"]', async root => {
     }, 'Passkey añadida.');
   });
   ui.retry(load); await load();
-});
+}
+
+export function mountPasskeys(root?: HTMLElement): void {
+  mount('[data-manager="passkeys"]', initializePasskeys, root);
+}
+
+mountPasskeys();

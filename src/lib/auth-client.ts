@@ -9,18 +9,13 @@ import {
   organizationClient,
 } from "better-auth/client/plugins";
 
-// Automatically detect base URL based on environment
+// Browsers always reach the API through their own origin (Astro or the static
+// frontend's /api proxy). Prerendering imports the client but makes no request.
 const getBaseURL = () => {
-  // In browser, use current origin if on production domain
   if (typeof window !== "undefined") {
-    const { origin, hostname } = window.location;
-    // If on production domain, use current origin
-    if (hostname.includes("capyschool.com") || hostname.includes("capy.town")) {
-      return origin;
-    }
+    return window.location.origin;
   }
-  // Otherwise use env var or localhost
-  return import.meta.env.PUBLIC_AUTH_URL || "http://localhost:4321";
+  return undefined;
 };
 
 export const authClient = createAuthClient({

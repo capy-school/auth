@@ -61,7 +61,7 @@ before(async () => {
   });
   render = (await server.ssrLoadModule('svelte/server')).render;
   Composition = (await server.ssrLoadModule('virtual:kit-login')).default;
-  Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/login/+page.svelte')).default;
+  Preview = (await server.ssrLoadModule('/src/kit/diagnostic-routes/__migration/login/+page.svelte')).default;
   EmailSignIn = (await server.ssrLoadModule('/src/kit/lib/login/EmailSignIn.svelte')).default;
   PasskeySignIn = (await server.ssrLoadModule('/src/kit/lib/login/PasskeySignIn.svelte')).default;
 });

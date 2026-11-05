@@ -1,3 +1,6 @@
+/** @typedef {{authOrigin: string, appOrigins: string[]}} LocalAuthPolicy */
+
+/** @param {boolean} dev @param {string | undefined} optIn @param {string} origin */
 export function localPolicy(dev, optIn, origin) {
   if (!dev || optIn !== '1') return null;
   const url = new URL(origin);
@@ -10,6 +13,7 @@ export function localPolicy(dev, optIn, origin) {
   };
 }
 
+/** @param {string | URL} target @param {LocalAuthPolicy | null | undefined} policy */
 export function isLocalTarget(target, policy) {
   try {
     const url = new URL(target);
@@ -17,19 +21,23 @@ export function isLocalTarget(target, policy) {
   } catch { return false; }
 }
 
-/** @param {{authOrigin: string, appOrigins: string[]} | null} policy */
+/** @param {string} target @param {string} origin @param {LocalAuthPolicy | null} policy */
 export function postLoginDestination(target, origin, policy = null) {
   try {
     const url = new URL(target, origin);
     if (url.username || url.password) return '/';
-    if (url.origin === origin) return `${url.pathname}${url.search}${url.hash}`;
+    // A //path is a network-path reference when assigned to location or used as
+    // a callback. Keep its absolute same-origin URL instead of changing hosts.
+    if (url.origin === origin) return url.pathname.startsWith('//')
+      ? url.toString()
+      : `${url.pathname}${url.search}${url.hash}`;
     if (policy && !isLocalTarget(url, policy)) return '/';
     if (!policy && (url.hostname === 'capy.town' || url.hostname.endsWith('.capy.town'))) return url.toString();
     return `/api/sso/bridge?${new URLSearchParams({ redirect: url.toString() })}`;
   } catch { return '/'; }
 }
 
-/** @param {{authOrigin: string, appOrigins: string[]} | null} policy */
+/** @param {string} target @param {string} origin @param {LocalAuthPolicy | null} policy */
 export function magicLinkDestination(target, origin, policy = null) {
   const destination = postLoginDestination(target, origin, policy);
   // Better Auth 1.3 decodes relative callbacks before validation; nested URL
@@ -38,6 +46,11 @@ export function magicLinkDestination(target, origin, policy = null) {
   return policy ? new URL(destination, origin).toString() : destination;
 }
 
+/**
+ * @param {string} search
+ * @param {{getItem(key: string): string | null} | null | undefined} storage
+ * @param {(id: string, target: string) => boolean} allowed
+ */
 export function selectRedirect(search, storage, allowed) {
   const params = new URLSearchParams(search);
   if (params.has('app') || params.has('redirect')) {

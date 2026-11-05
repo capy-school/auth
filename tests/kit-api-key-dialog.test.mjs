@@ -125,9 +125,9 @@ test('component is controlled presentation with zero-argument callbacks and no i
 });
 
 test('fictional dialog preview renders initially open with an in-panel no-generation/no-copy notice', async () => {
-  assert.ok(existsSync(new URL('../src/kit/routes/__migration/api-key-dialog/+page.svelte', import.meta.url)),
+  assert.ok(existsSync(new URL('../src/kit/diagnostic-routes/__migration/api-key-dialog/+page.svelte', import.meta.url)),
     'The fictional dialog preview is absent');
-  const Preview = (await server.ssrLoadModule('/src/kit/routes/__migration/api-key-dialog/+page.svelte')).default;
+  const Preview = (await server.ssrLoadModule('/src/kit/diagnostic-routes/__migration/api-key-dialog/+page.svelte')).default;
   const { body: html, head } = render(Preview);
   assert.match(head, /name="robots" content="noindex"/);
   assert.match(html, /API Key Generated/);
@@ -141,7 +141,7 @@ test('fictional dialog preview renders initially open with an in-panel no-genera
   assert.ok(html.indexOf('Fictional dialog fixture') > html.indexOf('newKeyModal'));
   assert.ok(html.indexOf('Fictional dialog fixture') < html.indexOf('newKeyValue'));
   assert.doesNotMatch(html, /Copied!|<a\b|<form\b|Welcome Back|2FA Protected|role="status"/);
-  const preview = source('src/kit/routes/__migration/api-key-dialog/+page.svelte');
+  const preview = source('src/kit/diagnostic-routes/__migration/api-key-dialog/+page.svelte');
   assert.match(preview, /copyLabel="Copy"/);
   assert.match(preview, /onCopy=\{\(\) => \{ copyRequests\+\+; \}\}/);
   assert.match(preview, /onClose=\{\(\) => \{ dismissals\+\+; open = false; \}\}/);

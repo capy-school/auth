@@ -62,8 +62,12 @@ export function accountUI(root: HTMLElement) {
   };
 }
 
-export function mount(selector: string, initialize: (root: HTMLElement) => Promise<void>): void {
-  document.querySelectorAll<HTMLElement>(selector).forEach(root => {
+export function mount(selector: string, initialize: (root: HTMLElement) => Promise<void>, target?: HTMLElement): void {
+  if (typeof document === 'undefined') return;
+  const roots = target ? [target] : document.querySelectorAll<HTMLElement>(selector);
+  roots.forEach(root => {
+    // Kit owns authorization and explicitly mounts its own node after hydration.
+    if (!root.matches(selector) || (!target && root.hasAttribute('data-kit-manager'))) return;
     if (root.dataset.mounted) return;
     root.dataset.mounted = 'true';
     void initialize(root).catch(reason => accountUI(root).fail(reason)).finally(() => {

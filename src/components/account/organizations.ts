@@ -1,7 +1,7 @@
 import { authClient } from '../../lib/auth-client';
 import { accountUI, action, data, element, mount } from './ui';
 
-mount('[data-manager="organizations"]', async root => {
+async function initializeOrganizations(root: HTMLElement) {
   const ui = accountUI(root);
   const list = root.querySelector<HTMLElement>('[data-list]')!;
   const empty = root.querySelector<HTMLElement>('[data-empty]')!;
@@ -123,4 +123,10 @@ mount('[data-manager="organizations"]', async root => {
     }, 'Invitación creada. Puedes consultarla en las invitaciones pendientes.');
   });
   ui.retry(load); await load();
-});
+}
+
+export function mountOrganizations(root?: HTMLElement): void {
+  mount('[data-manager="organizations"]', initializeOrganizations, root);
+}
+
+mountOrganizations();

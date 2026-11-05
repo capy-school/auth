@@ -38,3 +38,7 @@ local.db-shm
 local.db-wal
 local.db-journal
 .codegraph/
+
+# Static image build and test tooling
+/docker/launcher/target/
+__pycache__/

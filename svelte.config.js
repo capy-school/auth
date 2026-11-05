@@ -11,7 +11,7 @@ const config = {
     files: {
       src: 'src/kit',
       assets: 'public',
-      routes: 'src/kit/routes',
+      routes: process.env.KIT_DIAGNOSTICS === '1' ? 'src/kit/diagnostic-routes' : 'src/kit/routes',
       lib: 'src/kit/lib',
       hooks: {
         client: 'src/kit/hooks.client',
