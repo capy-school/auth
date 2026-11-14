@@ -24,6 +24,7 @@ test('proxy exposes no browser runtime configuration and verifies upstream TLS',
   assert.equal(rule.changeOrigin, true);
   assert.equal(rule.rewrite, undefined);
   assert.equal(Object.keys(kitProxy(undefined, true)).length, 2);
+  assert.equal(kitProxy(undefined, true)['^/dev/inbox(?:[/?]|$)'].changeOrigin, false);
   assert.equal(kitProxyServer().cors, false);
 });
 

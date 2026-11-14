@@ -12,15 +12,19 @@ export function apiUpstream(value = 'http://127.0.0.1:4321') {
   return url.origin;
 }
 
+/** @param {string | undefined} upstream */
 export function kitProxy(upstream, localInbox = false) {
   const options = () => ({ target: apiUpstream(upstream), changeOrigin: true, xfwd: true, secure: true });
   return {
     // Vite tests req.url, which includes the query after the exact /api path.
     '^/api(?:[/?]|$)': options(),
-    ...(localInbox ? { '^/dev/inbox(?:[/?]|$)': options() } : {}),
+    // Astro's development inbox checks its exact public origin. Keep that Host
+    // instead of replacing it with the loopback transport address.
+    ...(localInbox ? { '^/dev/inbox(?:[/?]|$)': { ...options(), changeOrigin: false } } : {}),
   };
 }
 
+/** @param {string | undefined} upstream */
 export function kitProxyServer(upstream, localInbox = false, diagnostics = false) {
   // Vite's default CORS middleware otherwise answers OPTIONS before the proxy.
   // The API owns CORS and must receive its own preflight requests unchanged.

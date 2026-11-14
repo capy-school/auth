@@ -22,8 +22,8 @@ before(async () => {
   temporary = await mkdtemp(join(temporaryRoot, 'kit-core-login-'));
   const fixture = join(temporary, 'LoginFixture.svelte');
   await writeFile(fixture, `<script>
-    import LoginPortal from '${join(root, 'src/kit/lib/portal/LoginPortal.svelte')}';
-    import LoginForm from '${join(root, 'src/kit/lib/portal/LoginForm.svelte')}';
+    import LoginPortal from '${join(root, 'src/lib/portal/LoginPortal.svelte')}';
+    import LoginForm from '${join(root, 'src/lib/portal/LoginForm.svelte')}';
   </script><LoginPortal><LoginForm /></LoginPortal>`);
   const bundled = await build({
     entryPoints: [fixture], bundle: true, write: false, platform: 'node', format: 'esm',
@@ -94,7 +94,7 @@ test('provider markup preserves approved AuthButton utility classes, icons and n
 
 test('owned components compile cleanly for both prerender and browser hydration', async () => {
   for (const name of ['LoginPortal', 'LoginForm', 'ProviderIcon', 'AuthButton']) {
-    const filename = `src/kit/lib/portal/${name}.svelte`;
+    const filename = `src/lib/portal/${name}.svelte`;
     const source = await read(filename);
     for (const generate of ['server', 'client']) {
       const result = compile(source, { filename, generate });
@@ -104,7 +104,7 @@ test('owned components compile cleanly for both prerender and browser hydration'
 });
 
 test('production composition uses the real client, isolated local opt-in, mount lifecycle and existing stylesheet', async () => {
-  const form = await read('src/kit/lib/portal/LoginForm.svelte');
+  const form = await read('src/lib/portal/LoginForm.svelte');
   assert.match(form, /import\s*\{\s*authClient\s*\}\s*from/);
   assert.match(form, /\bonMount\(/);
   assert.match(form, /PUBLIC_KIT_AUTH_LOCAL_MODE/);
@@ -114,5 +114,5 @@ test('production composition uses the real client, isolated local opt-in, mount 
   assert.match(form, /data-local-preview/);
   assert.match(form, /href="\/dev\/inbox"/);
   assert.match(form, /login-local-social-note/);
-  assert.match(await read('src/kit/lib/portal/LoginPortal.svelte'), /styles\/login\.css/);
+  assert.match(await read('src/lib/portal/LoginPortal.svelte'), /styles\/login\.css/);
 });

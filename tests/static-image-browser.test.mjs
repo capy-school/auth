@@ -32,18 +32,19 @@ test('real scratch image hydrates and authenticates through Nginx using an isola
   let browser, networkCreated = false;
   const containers = [];
   try {
-    await mkdir(join(context, 'src/lib'), { recursive: true });
+    await mkdir(join(context, 'api/src/lib'), { recursive: true });
+    await mkdir(join(context, 'shared'), { recursive: true });
     await mkdir(join(context, 'tests/fixtures'), { recursive: true });
-    for (const name of ['local-auth.ts', 'local-policy.mjs', 'local-inbox.mjs']) {
-      await writeFile(join(context, 'src/lib', name), await readFile(new URL(`../src/lib/${name}`, import.meta.url)));
+    for (const name of ['local-auth.ts', 'local-inbox.mjs']) {
+      await writeFile(join(context, 'api/src/lib', name), await readFile(new URL(`../api/src/lib/${name}`, import.meta.url)));
     }
-    for (const name of ['package.json', 'bun.lock']) {
+    for (const name of ['package.json', 'bun.lock', 'api/package.json', 'shared/local-policy.mjs']) {
       await writeFile(join(context, name), await readFile(new URL(`../${name}`, import.meta.url)));
     }
     await writeFile(join(context, 'tests/fixtures/static-auth.ts'), server);
     // Legacy libsql's native addon needs glibc under Bun. This is only the
     // independent test backend; the application remains musl/static scratch.
-    await writeFile(join(context, 'Dockerfile'), `FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4\nWORKDIR /app\nCOPY package.json bun.lock ./\nRUN bun install --frozen-lockfile --ignore-scripts\nCOPY src/ ./src/\nCOPY tests/fixtures/static-auth.ts ./tests/fixtures/static-auth.ts\nUSER 101:101\nENTRYPOINT ["bun","tests/fixtures/static-auth.ts"]\n`);
+    await writeFile(join(context, 'Dockerfile'), `FROM oven/bun:1.3.14@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4\nWORKDIR /app\nCOPY package.json bun.lock ./\nCOPY api/package.json ./api/package.json\nRUN bun install --frozen-lockfile --ignore-scripts\nCOPY api/src/ ./api/src/\nCOPY shared/ ./shared/\nCOPY tests/fixtures/static-auth.ts ./tests/fixtures/static-auth.ts\nUSER 101:101\nENTRYPOINT ["bun","tests/fixtures/static-auth.ts"]\n`);
     docker('build', '--pull=false', '-t', apiImage, context);
     docker('network', 'create', network);
     networkCreated = true;

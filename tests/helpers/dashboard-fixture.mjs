@@ -1,81 +1,65 @@
-import { createServer as createViteServer } from 'vite';
-import { getViteConfig } from 'astro/config';
-import { createServer as createHttpServer } from 'node:http';
+import { createServer } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { build } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-export const exampleUser = { name: 'Alex Example', email: 'alex@example.invalid', role: 'user', emailVerified: true, image: '' };
+export const exampleUser = { id: 'u', name: 'Alex Example', email: 'alex@example.invalid', role: 'user', emailVerified: true, image: '', twoFactorEnabled: false };
 
+// Actual Svelte account views and controllers, with browser-only session/SDK
+// boundaries. The real static router + Better Auth are tested separately.
 export async function dashboardFixture() {
-  const temporary = await mkdtemp('/tmp/opencode/auth-dashboard-test-');
-  const config = await getViteConfig({
-    root, configFile: false, envDir: temporary, cacheDir: `${temporary}/cache`,
-    optimizeDeps: { noDiscovery: true, include: ['qrcode'] },
-    plugins: [{
-      name: 'isolated-account-auth', enforce: 'pre',
-      resolveId(id, importer) {
-        if (id.endsWith('/lib/auth') && importer?.includes('/src/pages/')) return '\0account-auth-fixture';
-        if (id.endsWith('/lib/auth-client')) return '\0account-client-fixture';
-      },
-      load(id) {
-        if (id === '\0account-auth-fixture') return `export const auth={api:{getSession:async({headers})=>headers.has('x-fixture-user')?{user:${JSON.stringify(exampleUser)},session:{id:'current'}}:null}};`;
-        if (id === '\0account-client-fixture') return `const call=(path)=>new Proxy(()=>{}, {get:(_,key)=>call([...path,key]),apply:(_,self,args)=>window.__accountCall(path.join('.'),...args)});export const authClient=call([]);`;
-      },
-    }],
-    server: { middlewareMode: true, watch: null, hmr: false },
-  }, { root, configFile: false, envDir: temporary, logLevel: 'silent' })({ command: 'serve', mode: 'test' });
-  const vite = await createViteServer(config);
+  const temporary = await mkdtemp('/tmp/opencode/auth-account-fixture-');
+  const component = `${root}tests/dashboard-virtual.svelte`;
   let http;
   try {
-    const Dashboard = (await vite.ssrLoadModule('/src/components/dashboard/Dashboard.astro')).default;
-    const { experimental_AstroContainer } = await vite.ssrLoadModule('astro/container');
-    const container = await experimental_AstroContainer.create();
-    const render = (user = exampleUser) => container.renderToString(Dashboard, { props: { user }, partial: false });
-    const renderPage = async (page, user = exampleUser, props = {}) => {
-      const Page = (await vite.ssrLoadModule('/src/components/account/AccountPage.astro')).default;
-      return container.renderToString(Page, { props: { page, user, ...props }, partial: false });
-    };
-    const paths = { security: 'security', sessions: 'sessions', passkey: 'passkey', '2fa': 'two-factor', 'api-keys': 'api-keys', organizations: 'organizations' };
+    const output = await build({
+      root, configFile: false, envDir: temporary, cacheDir: `${temporary}/cache`, logLevel: 'error',
+      resolve: { alias: { $lib: `${root}src/lib` } },
+      plugins: [{
+        name: 'svelte-account-fixture', enforce: 'pre',
+        resolveId(id) {
+          if (id === 'account-fixture') return '\0account-fixture';
+          if (id === component) return component;
+          if (id === '$app/navigation') return '\0account-navigation';
+          if (id === '$lib/auth/session' || /\/lib\/auth\/session(?:\.ts)?$/.test(id)) return '\0account-session';
+          if (id.endsWith('/auth-client')) return '\0account-client';
+        },
+        load(id) {
+          if (id === '\0account-fixture') return `import {mount} from 'svelte';import Fixture from ${JSON.stringify(component)};mount(Fixture,{target:document.getElementById('app')});`;
+          if (id === '\0account-navigation') return `export const goto=async(path)=>{location.assign(path)};`;
+          if (id === '\0account-session') return `export const readSession=async()=>({state:'authenticated',user:${JSON.stringify(exampleUser)}});`;
+          if (id === '\0account-client') return `const call=(path)=>new Proxy(()=>{}, {get:(_,key)=>call([...path,key]),apply:(_,self,args)=>window.__accountCall(path.join('.'),...args)});export const authClient=call([]);`;
+          if (id === component) return `<script>
+            import Dashboard from '../src/lib/account/Dashboard.svelte';
+            import Settings from '../src/routes/settings/[section]/+page.svelte';
+            const path=location.pathname.replace(/\\/$/,'');
+            const section=path.split('/').at(-1);
+          </script>
+          {#if path==='/dashboard'}<Dashboard />{:else}<Settings data={{section}} />{/if}`;
+        },
+      }, svelte({ configFile: false })],
+      build: { write: false, minify: false, rollupOptions: { input: 'account-fixture', output: { inlineDynamicImports: true } } },
+    });
+    const js = output.output.find(item => item.type === 'chunk').code;
+    const css = output.output.filter(item => item.type === 'asset' && item.fileName.endsWith('.css')).map(item => item.source).join('\n');
     return {
-      render, renderPage,
-      async renderRoute(path, signedIn = false) {
-        const Page = (await vite.ssrLoadModule(`/src/pages${path}.astro`)).default;
-        return container.renderToResponse(Page, { request: new Request(`http://fixture.invalid${path}`, { headers: signedIn ? { 'x-fixture-user': '1' } : {} }), partial: false });
-      },
       async listen() {
-        http = createHttpServer(async (request, response) => {
+        http = createServer((request, response) => {
           const path = new URL(request.url, 'http://fixture.invalid').pathname;
-          const page = paths[path.replace('/settings/', '')];
-          if (path === '/dashboard' || page) {
-            try {
-              // This Astro version already emits the component's native client
-              // script. Injecting another initializer would mount notes twice.
-              const html = (await (page ? renderPage(page) : render())).replace('</head>', '<link rel="stylesheet" href="/src/styles/dashboard.css?direct"></head>');
-              response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-              response.end(html);
-            } catch (error) { response.writeHead(500); response.end(String(error)); }
-          } else { vite.middlewares(request, response); }
+          response.setHeader('Cache-Control', 'no-store');
+          if (path === '/component.js') { response.setHeader('Content-Type', 'text/javascript'); response.end(js); }
+          else if (path === '/component.css') { response.setHeader('Content-Type', 'text/css'); response.end(css); }
+          else { response.setHeader('Content-Type', 'text/html'); response.end('<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/component.css"></head><body><div id="app"></div><script type="module" src="/component.js"></script></body></html>'); }
         });
         await new Promise(resolve => http.listen(0, '127.0.0.1', resolve));
         return `http://127.0.0.1:${http.address().port}/dashboard`;
       },
       async close() {
-        if (http) { await new Promise(resolve => { http.closeAllConnections(); http.close(resolve); }); }
-        await vite.close();
+        if (http) await new Promise(resolve => { http.closeAllConnections(); http.close(resolve); });
         await rm(temporary, { recursive: true, force: true });
       },
     };
-  } catch (error) {
-    await vite.close();
-    await rm(temporary, { recursive: true, force: true });
-    throw error;
-  }
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const fixture = await dashboardFixture();
-  console.log(JSON.stringify({ url: await fixture.listen(), fixture: true, authentication: false }));
-  process.once('SIGINT', async () => { await fixture.close(); process.exit(0); });
-  process.once('SIGTERM', async () => { await fixture.close(); process.exit(0); });
+  } catch (error) { await rm(temporary, { recursive: true, force: true }); throw error; }
 }

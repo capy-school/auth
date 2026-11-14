@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { kitStaticFixture } from './helpers/kit-static-fixture.mjs';
 
 test('production document declares the language of the approved Spanish UI', async () => {
-  const template = await readFile(new URL('../src/kit/app.html', import.meta.url), 'utf8');
+  const template = await readFile(new URL('../src/app.html', import.meta.url), 'utf8');
   assert.match(template, /<html lang="es">/);
 });
 

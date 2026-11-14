@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const checkConfig = (overrides, assertion) => spawnSync(process.execPath, [
   '--input-type=module', '-e',
-  `import assert from 'node:assert/strict'; import config from './astro.config.mjs'; ${assertion}`,
+  `import assert from 'node:assert/strict'; import config from './api/astro.config.mjs'; ${assertion}`,
 ], {
   cwd: root,
   encoding: 'utf8',
@@ -24,7 +24,7 @@ const checkConfig = (overrides, assertion) => spawnSync(process.execPath, [
 test('local config keeps Astro env loading and uses the development server', () => {
   const result = checkConfig({}, `
     assert.equal(config.adapter, undefined);
-    assert.equal(config.envDir, undefined);
+    assert.equal(config.envDir, ${JSON.stringify(root)});
     assert.notEqual(config.vite.envDir, false);
     assert.equal(config.output, 'server');
   `);

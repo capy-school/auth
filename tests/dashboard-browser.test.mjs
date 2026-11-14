@@ -11,7 +11,7 @@ after(async () => { try { await browser?.close(); } finally { await fixture?.clo
 const evaluate = expression => browser.evaluate(expression);
 async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
-  await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if([...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
+  await evaluate(`new Promise((resolve,reject)=>{let tries=0;const ready=()=>{if(document.querySelector('[data-account-protected]')?.hidden===false && [...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true'))return resolve(true);if(++tries>180)return reject(new Error('Manager did not initialize'));requestAnimationFrame(ready)};ready()})`);
 }
 const paths = ['/dashboard', '/settings/security', '/settings/sessions', '/settings/passkey', '/settings/2fa', '/settings/api-keys', '/settings/organizations'];
 
@@ -51,7 +51,7 @@ test('keyboard users get a visible skip link and an exposed empty success region
   assert.equal(await evaluate(`document.activeElement.className`), 'dashboard-skip');
   assert.equal(await evaluate(`getComputedStyle(document.activeElement).outlineStyle`), 'solid');
   await browser.page('Accessibility.enable');
-  const { result } = await browser.page('Runtime.evaluate', { expression: `document.querySelector('[role="status"]')` });
+  const { result } = await browser.page('Runtime.evaluate', { expression: `document.querySelector('[data-manager] [data-status][role="status"]')` });
   const { nodes } = await browser.page('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
   assert.equal(nodes[0].ignored, false);
   assert.equal(nodes[0].role.value, 'status');

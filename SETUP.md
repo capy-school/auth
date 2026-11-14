@@ -1,253 +1,40 @@
-# Setup Guide
+# Configuración de frontend y API
 
-## Quick Setup
+Para desarrollo sin cuentas ni servicios productivos, sigue [QUICKSTART](QUICKSTART.md). El frontend y la API se arrancan por separado; no copies secretos del backend al frontend.
 
-### 1. Create .env file
+## Entorno local existente
 
-```bash
-cp .env.example .env
-```
+`npm run dev:setup` prepara explícitamente `.local-auth/auth.db`, un secreto local y `.env.development.local` en la raíz. Usa Better Auth real con magic-link y bandeja de desarrollo. No reemplaza archivos de entorno existentes ni debe usarse para preparar producción.
 
-Edit `.env` with your configuration:
+La API conserva esa ubicación aunque su código esté en `api/`: `api/astro.config.mjs` carga el entorno desde el directorio padre. El frontend solo descubre archivos de entorno en `config/frontend`, con prefijo público `PUBLIC_KIT_`. `npm run dev` activa la política local de SvelteKit sin leer el secreto local.
 
-```env
-# Required
-TURSO_DATABASE_URL=libsql://local.db
-TURSO_AUTH_TOKEN=
+Si la configuración local existente tiene un origen diferente, ambos procesos deben usar el mismo origen público. El valor predeterminado es `http://auth.localhost`, compartido mediante Portless y el proxy Vite. Un error de modos/orígenes inconsistentes debe corregirse en la configuración, no relajando su validación.
 
-BETTER_AUTH_SECRET=your-super-secret-key-at-least-32-characters-long-change-this
+## Backend no local
 
-# Optional OAuth Providers
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+Conserva el entorno actual del backend. `.env.example` describe sus nombres; si ya tienes `.env`, **no lo sobrescribas**.
 
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
+| Grupo | Configuración en el backend |
+| --- | --- |
+| Persistencia | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` |
+| Autenticación | `BETTER_AUTH_SECRET`, `AUTH_BASE_URL`, `BETTER_AUTH_URL` |
+| Orígenes/cookies | Trusted origins, redirects SSO y dominio/atributos de cookies adecuados al origen público |
+| Proveedores | Credenciales y callbacks de los proveedores realmente habilitados |
+| Correo | `FORWARDEMAIL_KEY`, `SMTP_FROM`; [guía Forward Email](FORWARDEMAIL_SETUP.md) |
+| Passkeys | `PASSKEY_RP_ID`, `PASSKEY_RP_NAME` y origen válido |
 
-FACEBOOK_CLIENT_ID=
-FACEBOOK_CLIENT_SECRET=
-```
+El origen público es el del frontend, no necesariamente la dirección de transporte de la API. El callback de un proveedor tiene la forma `https://<origen-publico>/api/auth/callback/<provider>`. Configúralo en la consola del proveedor correspondiente; construir la UI no habilita sus credenciales.
 
-### 2. Set up Turso Database (Production)
+No se han actualizado Better Auth ni el esquema de datos como parte de esta migración. Los scripts de DB viven en el workspace API; su `--help` está disponible con `npm run --workspace @capy/auth-api db:generate -- --help`. Una migración real requiere revisar primero el entorno y el destino; no es un paso del build/check del frontend.
 
-```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
-
-# Create database
-turso db create auth-gateway
-
-# Get database URL
-turso db show auth-gateway --url
-
-# Create auth token
-turso db tokens create auth-gateway
-```
-
-Update your `.env` with the Turso credentials.
-
-### 3. Run Database Migration
+## Build y operación
 
 ```bash
-bun run db:migrate
+npm run check
+npm run build      # .svelte-kit/static: frontend sin servidor runtime
+npm run api:build  # api/dist: backend Cloudflare existente, sin desplegar
 ```
 
-### 4. Start Development Server
+Para operar la imagen estática, sigue [docs/static-image.md](docs/static-image.md). `API_UPSTREAM` se configura al arrancar Nginx y no sustituye la configuración de confianza/cookies del backend.
 
-```bash
-bun dev
-```
-
-Visit **http://localhost:4321**
-
-## OAuth Provider Setup
-
-### Google OAuth
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Navigate to **APIs & Services** > **Credentials**
-4. Click **Create Credentials** > **OAuth client ID**
-5. Choose **Web application**
-6. Add authorized redirect URIs:
-   - `http://localhost:4321/api/auth/callback/google`
-   - `https://yourdomain.com/api/auth/callback/google` (production)
-7. Copy **Client ID** and **Client Secret** to `.env`
-
-### GitHub OAuth
-
-1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
-2. Click **New OAuth App**
-3. Fill in:
-   - Application name: Your app name
-   - Homepage URL: `http://localhost:4321`
-   - Authorization callback URL: `http://localhost:4321/api/auth/callback/github`
-4. Copy **Client ID** and **Client Secret** to `.env`
-
-### Facebook OAuth
-
-1. Go to [Facebook Developers](https://developers.facebook.com/)
-2. Create a new app
-3. Add **Facebook Login** product
-4. Configure OAuth redirect URIs:
-   - `http://localhost:4321/api/auth/callback/facebook`
-5. Copy **App ID** and **App Secret** to `.env`
-
-## Development Workflow
-
-### Local Database
-
-For local development, you can use a local SQLite file:
-
-```env
-TURSO_DATABASE_URL=file:local.db
-TURSO_AUTH_TOKEN=
-```
-
-### Testing OAuth Locally
-
-Use tools like **ngrok** to expose your local server:
-
-```bash
-ngrok http 4321
-```
-
-Update `.env`:
-```env
-BETTER_AUTH_URL=https://your-ngrok-url.ngrok.io
-```
-
-Update OAuth callback URLs in provider settings to use the ngrok URL.
-
-## Features Implemented
-
-✅ **Core Authentication**
-- Better Auth integration
-- Kysely ORM with Turso/LibSQL
-- Session management
-- Secure cookie handling
-
-✅ **OAuth Providers (Configurable)**
-- Google
-- Facebook
-- GitHub
-- Apple (needs additional setup)
-- Kakao, Naver, Line (custom OAuth proxy)
-- Yandex, VK, WeChat (custom OAuth proxy)
-
-✅ **UI Components**
-- Beautiful login gateway with gradient design
-- Responsive design with Tailwind CSS
-- Icon support with Lucide React
-- Loading states and error handling
-
-✅ **Database**
-- Full schema for auth system
-- Support for multiple providers
-- Session tracking
-- User profiles
-
-## Extending Features
-
-### Adding Passkey Support
-
-1. Install Better Auth passkey plugin
-2. Update `src/lib/auth.ts` to include passkey configuration
-3. Update UI to enable passkey registration and login
-
-### Adding Magic Link / Email OTP
-
-1. Configure email service (e.g., Resend, SendGrid)
-2. Add email plugins to Better Auth configuration
-3. Update environment variables with SMTP settings
-
-### Adding 2FA
-
-1. Install Better Auth 2FA plugin
-2. Add QR code generation
-3. Create 2FA setup and verification UI
-
-### Organization & Multi-Tenancy
-
-1. Configure organization plugin in Better Auth
-2. Create organization management UI
-3. Add role-based access control
-
-## Deployment
-
-### Environment Variables (Production)
-
-```env
-NODE_ENV=production
-BETTER_AUTH_SECRET=<long-secure-random-string>
-BETTER_AUTH_URL=https://yourdomain.com
-TURSO_DATABASE_URL=<your-turso-url>
-TURSO_AUTH_TOKEN=<your-turso-token>
-```
-
-### Build
-
-```bash
-bun run build
-```
-
-### Deploy to Vercel
-
-```bash
-vercel
-```
-
-Or push to GitHub and connect to Vercel.
-
-### Deploy to Netlify
-
-```bash
-netlify deploy
-```
-
-### Deploy to Cloudflare Pages
-
-```bash
-bun run build
-wrangler pages publish dist
-```
-
-## Troubleshooting
-
-### Database Connection Issues
-
-- Verify `TURSO_DATABASE_URL` format: `libsql://...`
-- Check if auth token is valid
-- For local development, use `file:local.db`
-
-### OAuth Not Working
-
-- Verify callback URLs match exactly
-- Check client ID and secret are correct
-- Ensure `BETTER_AUTH_URL` matches your domain
-- Check OAuth provider console for errors
-
-### Session Issues
-
-- Clear browser cookies
-- Verify `BETTER_AUTH_SECRET` is set and at least 32 characters
-- Check database has session table
-
-## Security Checklist
-
-- [ ] Change `BETTER_AUTH_SECRET` to a strong random value
-- [ ] Use HTTPS in production (`useSecureCookies: true`)
-- [ ] Keep dependencies updated
-- [ ] Enable CSRF protection
-- [ ] Configure rate limiting
-- [ ] Set up proper CORS policies
-- [ ] Never commit `.env` to version control
-- [ ] Rotate secrets regularly
-- [ ] Use environment-specific configurations
-
-## Resources
-
-- [Better Auth Docs](https://www.better-auth.com)
-- [Turso Docs](https://docs.turso.tech)
-- [Astro Docs](https://docs.astro.build)
-- [Kysely Docs](https://kysely.dev)
+No borres `local.db`, `.local-auth` ni archivos de entorno para resolver un fallo. Comprueba primero origen público, transporte, cookies y logs. El build local no publica imágenes, no aplica migraciones y no despliega la API.

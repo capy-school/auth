@@ -5,6 +5,7 @@ ARG BUN_IMAGE=oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa1897
 FROM ${BUN_IMAGE} AS dependencies
 WORKDIR /app
 COPY package.json bun.lock ./
+COPY api/package.json ./api/package.json
 # The shared lock also contains the legacy DB/CLI. Its native install scripts
 # are unnecessary for a static build; frontend binaries arrive in locked
 # platform packages. Do not compile or initialize a backend during this build.
@@ -13,14 +14,12 @@ RUN bun install --frozen-lockfile --ignore-scripts \
     && bun node_modules/esbuild/bin/esbuild --version
 
 FROM dependencies AS frontend
-COPY svelte.config.js vite.sveltekit.config.ts tsconfig.json tsconfig.sveltekit.json ./
-COPY src/kit/ ./src/kit/
-COPY src/styles/ ./src/styles/
-COPY src/components/account/ ./src/components/account/
-COPY src/lib/auth-client.ts src/lib/local-policy.mjs src/lib/apps.ts src/lib/local-client.ts src/lib/local-inbox.mjs src/lib/dashboard-notes.ts ./src/lib/
+COPY svelte.config.js vite.config.ts tsconfig.json ./
+COPY src/ ./src/
+COPY shared/ ./shared/
 COPY scripts/kit-proxy.mjs ./scripts/kit-proxy.mjs
-COPY public/ ./public/
-RUN bun --bun run kit:build
+COPY static/ ./static/
+RUN bun --bun run build
 
 FROM ${ALPINE_IMAGE} AS assets-tools
 RUN apk add --no-cache python3 brotli zstd

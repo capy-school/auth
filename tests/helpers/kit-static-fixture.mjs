@@ -3,7 +3,7 @@ import { EventEmitter, once } from 'node:events';
 import { access, mkdtemp, mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { extname, resolve, sep, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createLocalAuth } from '../../src/lib/local-auth.ts';
+import { createLocalAuth } from '../../api/src/lib/local-auth.ts';
 
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',

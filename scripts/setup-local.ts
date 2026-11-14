@@ -2,8 +2,8 @@ import { mkdir, readFile, writeFile, chmod } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
-import { createLocalAuth } from '../src/lib/local-auth';
-import { localPolicy } from '../src/lib/local-policy.mjs';
+import { createLocalAuth } from '../api/src/lib/local-auth';
+import { localPolicy } from '../shared/local-policy.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const state = new URL('../.local-auth/', import.meta.url);

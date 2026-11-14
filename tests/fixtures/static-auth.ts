@@ -1,7 +1,7 @@
 // Test-only API. Copied into an independent temporary build context, never tiny.
 import { createServer } from 'node:http';
 import { mkdir } from 'node:fs/promises';
-import { createLocalAuth } from '../../src/lib/local-auth';
+import { createLocalAuth } from '../../api/src/lib/local-auth';
 
 const origin = process.env.PUBLIC_ORIGIN;
 if (!origin) throw new Error('Test PUBLIC_ORIGIN is required');

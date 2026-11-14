@@ -1,5 +1,12 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "extends": "./.svelte-kit/tsconfig.json",
+  "include": ["src/**/*.ts", "src/**/*.svelte", ".svelte-kit/*.d.ts", ".svelte-kit/types/**/$types.d.ts", "vite.config.ts"],
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true
+  }
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createLocalAuth, validateLocalDatabase } from '../src/lib/local-auth';
+import { createLocalAuth, validateLocalDatabase } from '../api/src/lib/local-auth';
 
 test('local database rejects remote URLs and existing legacy local.db', () => {
   for (const url of ['libsql://production.test', 'file:local.db', 'file:/tmp/local.db', 'file:/tmp/.local-auth/../local.db']) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { localPolicy, postLoginDestination, magicLinkDestination } from '../src/lib/local-policy.mjs';
+import { localPolicy, postLoginDestination, magicLinkDestination } from '../shared/local-policy.mjs';
 
 test('an allowed same-origin URL with a double-slash path never becomes cross-origin navigation', () => {
   for (const origin of ['https://auth.capy.town', 'http://auth.localhost:1355']) {

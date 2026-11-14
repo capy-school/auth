@@ -10,7 +10,7 @@ import { dashboardChrome } from './helpers/dashboard-chrome.mjs';
 import { accountState } from './helpers/account-state.mjs';
 
 const moduleAt = async (path) => {
-  const url = new URL(`../src/kit/lib/account/${path}.ts`, import.meta.url);
+  const url = new URL(`../src/lib/account/${path}.ts`, import.meta.url);
   assert.ok(existsSync(url), `Account ${path} implementation is absent`);
   return import(url.href);
 };
@@ -225,8 +225,8 @@ const stubs = {
   name: 'isolated-kit-account-contracts', enforce: 'pre',
   resolveId(id) {
     if (id === '$app/navigation') return '\0kit-account-navigation';
-    if (id === '$lib/auth/session' || /\/kit\/lib\/auth\/session(?:\.ts)?$/.test(id)) return '\0kit-account-session';
-    if (id.endsWith('/lib/auth-client')) return '\0kit-account-client';
+    if (id === '$lib/auth/session' || /\/lib\/auth\/session(?:\.ts)?$/.test(id)) return '\0kit-account-session';
+    if (id.endsWith('/auth-client')) return '\0kit-account-client';
   },
   load(id) {
     if (id === '\0kit-account-navigation') return `export const goto=async(path)=>{window.__redirects.push(path)};`;
@@ -236,21 +236,21 @@ const stubs = {
 };
 
 test('all account routes render generic approved markup with inert protected content and disabled forms', async () => {
-  for (const name of components) assert.ok(existsSync(new URL(`../src/kit/lib/account/${name}.svelte`, import.meta.url)), `${name} Svelte port is absent`);
+  for (const name of components) assert.ok(existsSync(new URL(`../src/lib/account/${name}.svelte`, import.meta.url)), `${name} Svelte port is absent`);
   const temporary = await mkdtemp('/tmp/opencode/auth-kit-account-render-');
   const warnings = [];
   let vite;
   try {
     vite = await createServer({
-      configFile: false, envDir: 'src/kit', cacheDir: `${temporary}/cache`,
+      configFile: false, envDir: 'config/frontend', cacheDir: `${temporary}/cache`,
       optimizeDeps: { noDiscovery: true, include: [] },
-      resolve: { alias: { $lib: new URL('../src/kit/lib', import.meta.url).pathname } },
+      resolve: { alias: { $lib: new URL('../src/lib', import.meta.url).pathname } },
       plugins: [stubs, svelte({ configFile: false, onwarn: warning => warnings.push({ code: warning.code, message: warning.message }) })],
       server: { middlewareMode: true, watch: null, hmr: false },
     });
     const { render } = await vite.ssrLoadModule('svelte/server');
     for (const name of ['AccountPage', 'Dashboard']) {
-      const Component = (await vite.ssrLoadModule(`/src/kit/lib/account/${name}.svelte`)).default;
+      const Component = (await vite.ssrLoadModule(`/src/lib/account/${name}.svelte`)).default;
       for (const page of name === 'AccountPage' ? ['security', 'sessions', 'passkey', 'two-factor', 'api-keys', 'organizations'] : [undefined]) {
         const { body, head } = render(Component, { props: page ? { page } : {} });
         assert.match(head, /Login Gateway/);
@@ -267,15 +267,15 @@ test('all account routes render generic approved markup with inert protected con
         if (page === 'two-factor') assert.match(body, /pattern="\[0-9\]\{6\}"/);
       }
     }
-    const { entries, load } = await vite.ssrLoadModule('/src/kit/routes/settings/[section]/+page.ts');
+    const { entries, load } = await vite.ssrLoadModule('/src/routes/settings/[section]/+page.ts');
     const sections = ['security', 'sessions', 'passkey', '2fa', 'api-keys', 'organizations'];
     assert.deepEqual(entries().map(({ section }) => section), sections);
     for (const section of sections) assert.deepEqual(load({ params: { section } }), { section });
     assert.throws(() => load({ params: { section: 'invalid' } }), (error) => error.status === 404);
-    const Settings = (await vite.ssrLoadModule('/src/kit/routes/settings/[section]/+page.svelte')).default;
+    const Settings = (await vite.ssrLoadModule('/src/routes/settings/[section]/+page.svelte')).default;
     assert.match(render(Settings, { props: { data: { section: '2fa' } } }).body, /data-manager="two-factor"/);
-    assert.match(source('src/kit/routes/settings/[section]/+page.svelte'), /\{#key data\.section\}/);
-    const Logout = (await vite.ssrLoadModule('/src/kit/routes/logout/+page.svelte')).default;
+    assert.match(source('src/routes/settings/[section]/+page.svelte'), /\{#key data\.section\}/);
+    const Logout = (await vite.ssrLoadModule('/src/routes/logout/+page.svelte')).default;
     const logout = render(Logout).body;
     assert.match(logout, /<h1>Cerrar sesión<\/h1>/);
     assert.match(logout, /<button[^>]*disabled[^>]*data-sign-out/);
@@ -286,16 +286,16 @@ test('all account routes render generic approved markup with inert protected con
   }
 });
 
-test('shared controllers expose explicit mounts while retaining Astro automatic mounting', () => {
+test('account controllers expose explicit mounts without automatic side effects', () => {
   for (const [file, entry] of [['sessions', 'mountSessions'], ['passkeys', 'mountPasskeys'], ['api-keys', 'mountApiKeys'], ['two-factor', 'mountTwoFactor'], ['organizations', 'mountOrganizations']]) {
-    const code = source(`src/components/account/${file}.ts`);
+    const code = source(`src/lib/account/controllers/${file}.ts`);
     assert.match(code, new RegExp(`export function ${entry}\\(`));
-    assert.match(code, new RegExp(`${entry}\\(\\);`));
+    assert.doesNotMatch(code, new RegExp(`^${entry}\\(\\);`, 'm'));
   }
 });
 
-test('automatic mounting skips Kit roots and explicit root mounting is idempotent', async () => {
-  const { mount } = await import('../src/components/account/ui.ts');
+test('mounting requires an explicit authorized target and is idempotent', async () => {
+  const { mount } = await import('../src/lib/account/controllers/ui.ts');
   const previous = globalThis.document;
   const makeRoot = kit => ({ dataset: {}, matches: () => true, hasAttribute: name => kit && name === 'data-kit-manager', querySelectorAll: () => [] });
   const astro = makeRoot(false), kit = makeRoot(true), initialized = [];
@@ -304,11 +304,11 @@ test('automatic mounting skips Kit roots and explicit root mounting is idempoten
     const initialize = async root => { initialized.push(root); };
     mount('[data-manager="sessions"]', initialize);
     mount('[data-manager="sessions"]', initialize);
-    assert.deepEqual(initialized, [astro]);
+    assert.deepEqual(initialized, []);
     assert.equal(kit.dataset.mounted, undefined);
     mount('[data-manager="sessions"]', initialize, kit);
     mount('[data-manager="sessions"]', initialize, kit);
-    assert.deepEqual(initialized, [astro, kit]);
+    assert.deepEqual(initialized, [kit]);
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(kit.dataset.accountReady, 'true');
   } finally {
@@ -327,13 +327,13 @@ test('account components pass isolated strict type checking without Kit sync or 
         target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', strict: true,
         allowJs: true, checkJs: false, skipLibCheck: true, resolveJsonModule: true,
         esModuleInterop: true, lib: ['ES2022', 'DOM', 'DOM.Iterable'], types: [],
-        paths: { '$lib/*': [`${root}/src/kit/lib/*`] },
+        paths: { '$lib/*': [`${root}/src/lib/*`] },
       },
       include: [
-        `${root}/src/kit/lib/account/**/*`,
-        `${root}/src/kit/routes/dashboard/+page.svelte`,
-        `${root}/src/kit/routes/settings/[section]/+page.svelte`,
-        `${root}/src/kit/routes/logout/+page.svelte`,
+        `${root}/src/lib/account/**/*`,
+        `${root}/src/routes/dashboard/+page.svelte`,
+        `${root}/src/routes/settings/[section]/+page.svelte`,
+        `${root}/src/routes/logout/+page.svelte`,
         `${root}/node_modules/svelte/types/index.d.ts`,
         `${root}/node_modules/@sveltejs/kit/types/index.d.ts`,
         `${root}/node_modules/vite/client.d.ts`,
@@ -353,8 +353,8 @@ test('compiled account components gate managers and survive keyed view remounts'
   let http, browser;
   try {
     const output = await build({
-      configFile: false, envDir: 'src/kit', cacheDir: `${temporary}/cache`, logLevel: 'error',
-      resolve: { alias: { $lib: new URL('../src/kit/lib', import.meta.url).pathname } },
+      configFile: false, envDir: 'config/frontend', cacheDir: `${temporary}/cache`, logLevel: 'error',
+      resolve: { alias: { $lib: new URL('../src/lib', import.meta.url).pathname } },
       plugins: [stubs, {
         name: 'isolated-account-component',
         resolveId(id) { if (id === 'kit-account-test') return '\0kit-account-test'; if (id === fixtureId) return fixtureId; },
@@ -362,9 +362,9 @@ test('compiled account components gate managers and survive keyed view remounts'
           if (id === '\0kit-account-test') return `import {mount} from 'svelte';import Fixture from ${JSON.stringify(fixtureId)};mount(Fixture,{target:document.getElementById('app')});`;
           if (id === fixtureId) return `<script>
             import {onMount} from 'svelte';
-            import Dashboard from '../src/kit/lib/account/Dashboard.svelte';
-            import Settings from '../src/kit/routes/settings/[section]/+page.svelte';
-            import Logout from '../src/kit/routes/logout/+page.svelte';
+            import Dashboard from '../src/lib/account/Dashboard.svelte';
+            import Settings from '../src/routes/settings/[section]/+page.svelte';
+            import Logout from '../src/routes/logout/+page.svelte';
             let section=$state('dashboard');
             onMount(()=>{window.__visit=(next)=>{section=next};return()=>{delete window.__visit}});
           </script>

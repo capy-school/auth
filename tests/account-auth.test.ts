@@ -5,7 +5,7 @@ import { createHmac } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { getMigrations } from 'better-auth/db';
 import { passkey } from 'better-auth/plugins/passkey';
-import { createLocalAuth } from '../src/lib/local-auth';
+import { createLocalAuth } from '../api/src/lib/local-auth';
 
 const origin = 'http://auth.localhost';
 let root: string;

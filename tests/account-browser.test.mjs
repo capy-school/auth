@@ -13,7 +13,7 @@ async function wait(expression) {
 }
 async function visit(path, extra = '') {
   await browser.navigate(base + path, accountState + extra);
-  await wait(`[...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true')`);
+  await wait(`document.querySelector('[data-account-protected]')?.hidden===false && [...document.querySelectorAll('[data-manager]')].every(root=>root.dataset.accountReady==='true')`);
 }
 const submit = (form, values) => evaluate(`{const form=document.querySelector(${JSON.stringify(form)});for(const [name,value]of Object.entries(${JSON.stringify(values)}))form.elements.namedItem(name).value=value;form.requestSubmit()}`);
 

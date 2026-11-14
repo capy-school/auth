@@ -2,6 +2,8 @@
 
 This project uses [Forward Email's API](https://forwardemail.net/en/email-api) to send magic link emails.
 
+This is **backend configuration**, not a frontend dependency. For isolated local development, use the [local inbox](QUICKSTART.md) instead; no real email API key is required.
+
 ## Setup Steps
 
 ### 1. Get Your API Key
@@ -32,9 +34,9 @@ Before sending emails, you must verify your domain at Forward Email:
 3. Add the required DNS records (TXT, MX, etc.)
 4. Wait for verification to complete
 
-### 4. Production Setup (Vercel)
+### 4. Backend Deployment Configuration
 
-Add these environment variables in Vercel:
+Configure these variables only on the API service, using its actual public Auth origin:
 - `FORWARDEMAIL_KEY` = your API key
 - `SMTP_FROM` = `"Capy School Auth <noreply@capyschool.com>"`
 - `AUTH_BASE_URL` = `https://auth.capyschool.com`
@@ -43,7 +45,7 @@ Add these environment variables in Vercel:
 
 ## How It Works
 
-The `sendEmail()` function in `src/lib/email.ts`:
+The `sendEmail()` function in `api/src/lib/email.ts`:
 - Uses Forward Email's REST API (`https://api.forwardemail.net/v1/emails`)
 - Authenticates with Basic Auth (API key as username, empty password)
 - Sends Nodemailer-compatible JSON payload
@@ -56,13 +58,9 @@ The `sendEmail()` function in `src/lib/email.ts`:
 
 ## Testing
 
-Once configured, test the magic link flow:
-1. Start dev server: `bun run dev`
-2. Go to http://localhost:4321
-3. Click "Sign in with Email"
-4. Enter your email
-5. Click "Magic Link"
-6. Check your inbox for the sign-in email
+Once the non-local API and its public origin are deliberately configured, test with an approved email account. Start the backend with `npm run api:dev` and frontend with `npm run kit:dev`, then use the URL printed by Vite (not API port 4321). Enter the email and submit the magic-link form. Ensure the API's trusted origin and callback match that frontend URL.
+
+`npm run dev` intentionally selects the isolated local frontend policy; the local API sends links to its development inbox, not Forward Email. See [SETUP](SETUP.md) for environment separation. Automated frontend/image tests never require real email credentials.
 
 ## Troubleshooting
 

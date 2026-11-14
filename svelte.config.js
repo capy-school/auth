@@ -1,32 +1,10 @@
 import adapter from '@sveltejs/adapter-static';
 
 /** @type {import('@sveltejs/kit').Config} */
-const config = {
+export default {
   kit: {
-    adapter: adapter({
-      pages: '.svelte-kit/static',
-      assets: '.svelte-kit/static',
-      strict: true,
-    }),
-    files: {
-      src: 'src/kit',
-      assets: 'public',
-      routes: process.env.KIT_DIAGNOSTICS === '1' ? 'src/kit/diagnostic-routes' : 'src/kit/routes',
-      lib: 'src/kit/lib',
-      hooks: {
-        client: 'src/kit/hooks.client',
-        server: 'src/kit/hooks.server',
-        universal: 'src/kit/hooks',
-      },
-      appTemplate: 'src/kit/app.html',
-    },
-    outDir: '.svelte-kit',
-    env: {
-      dir: 'src/kit',
-      publicPrefix: 'PUBLIC_KIT_',
-      privatePrefix: 'KIT_',
-    },
+    adapter: adapter({ pages: '.svelte-kit/static', assets: '.svelte-kit/static', strict: true }),
+    files: { assets: 'static' },
+    env: { dir: 'config/frontend', publicPrefix: 'PUBLIC_KIT_', privatePrefix: 'KIT_' },
   },
 };
-
-export default config;

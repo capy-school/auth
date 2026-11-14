@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { localPolicy, isLocalTarget, postLoginDestination, selectRedirect } from '../src/lib/local-policy.mjs';
-import { createInbox } from '../src/lib/local-inbox.mjs';
+import { localPolicy, isLocalTarget, postLoginDestination, selectRedirect } from '../shared/local-policy.mjs';
+import { createInbox } from '../api/src/lib/local-inbox.mjs';
 
 test('local mode requires DEV and explicit opt-in; production ignores local input', () => {
   assert.equal(localPolicy(false, '1', 'https://auth.capy.town'), null);

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { readSession } from '../src/kit/lib/auth/session';
-import { createLoginPolicy, validateLoginQuery, continuationTarget, rememberLogin, safeStorage } from '../src/kit/lib/auth/policy';
-import { signInOAuth, signInMagicLink, signInPasskey } from '../src/kit/lib/auth/login';
+import { readSession } from '../src/lib/auth/session';
+import { createLoginPolicy, validateLoginQuery, continuationTarget, rememberLogin, safeStorage } from '../src/lib/auth/policy';
+import { signInOAuth, signInMagicLink, signInPasskey } from '../src/lib/auth/login';
 
 const registry = {
   capyschool: { id: 'capyschool', name: 'CapySchool', description: 'School', validBases: ['https://capyschool.com', 'https://capy.town'] },

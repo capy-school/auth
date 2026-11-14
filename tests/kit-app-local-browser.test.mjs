@@ -13,7 +13,7 @@ test('Kit development opt-in shows native disabled social previews and the local
   });
   backend.listen(0, '127.0.0.1');
   await once(backend, 'listening');
-  const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--config', 'vite.sveltekit.config.ts', '--host', '127.0.0.1', '--port', '0'], {
+  const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--config', 'vite.config.ts', '--host', '127.0.0.1', '--port', '0'], {
     env: { ...process.env, KIT_DIAGNOSTICS: '0', PUBLIC_KIT_AUTH_LOCAL_MODE: '1', API_UPSTREAM: `http://127.0.0.1:${backend.address().port}`, NO_COLOR: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

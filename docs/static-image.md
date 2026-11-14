@@ -40,49 +40,42 @@ En dos terminales, después de haber preparado el entorno local de Auth:
 
 ```bash
 # API Astro existente, en loopback. Conserva su configuración y base locales.
-npm run dev:api
+npm run api:dev
 ```
 
 ```bash
 # Frontend SvelteKit en el origen Portless auth.localhost.
-npm run kit:dev:local
+npm run dev
 ```
 
 El proxy de desarrollo utiliza `http://127.0.0.1:4321` por defecto. Puedes cambiar **solo el transporte del servidor de desarrollo**:
 
 ```bash
-API_UPSTREAM=http://127.0.0.1:4322 npm run kit:dev:local
+API_UPSTREAM=http://127.0.0.1:4322 npm run dev
 ```
 
 La API debe seguir configurada para el origen público que muestra Portless. El modo local es opt-in y de desarrollo: los botones sociales son visibles pero están nativamente deshabilitados, el correo usa magic-link y la bandeja local se abre a través del proxy de desarrollo. La bandeja no se incluye en la imagen.
 
-`npm run kit:dev` permite desarrollar el frontend sin activar la política local. Los comandos Astro anteriores se conservan; no registres simultáneamente dos frontends distintos como `auth` en Portless.
+`npm run kit:dev` permite desarrollar el frontend sin activar la política local. Los comandos Astro están bajo `api:*`; no registres simultáneamente dos frontends distintos como `auth` en Portless. La API conserva su entorno y `.local-auth/` en la raíz; el frontend descubre entorno solamente en `config/frontend`.
 
-## Prerender y diagnóstico
+## Prerender
 
 ```bash
-npm run kit:check
-npm run kit:build
+npm run check
+npm run build
 ```
 
 La salida pública está en `.svelte-kit/static`. Se generan login, dashboard, logout y los seis ajustes, sin datos personales ni sesiones. `ssr = true` permite producir ese HTML **durante el build**; `adapter-static` no distribuye un servidor de renderizado.
 
-Las previews anteriores permanecen en un árbol separado y opt-in:
-
-```bash
-npm run kit:diagnostic:dev
-npm run kit:diagnostic:build
-```
-
-El build diagnóstico no es un frontend de autenticación ni debe utilizarse para construir/publicar la imagen de aplicación. Tras usarlo, ejecuta otra vez `npm run kit:build` antes de probar los archivos de producción.
+SvelteKit es ahora el único frontend, en `src/routes` y `src/lib`. Las páginas Astro/React duplicadas y las previews desconectadas se retiraron; `__migration` devuelve 404. La API actual está en `api/`; no se implementó un BFF ni un backend SvelteKit.
 
 ## Verificar sin cuentas reales
 
 Para estas pruebas se necesitan Docker/BuildKit, dependencias del proyecto, Node y Chrome (`DASHBOARD_CHROME_BIN` permite elegir el ejecutable), además de `zstd` en el host para decodificar esa representación. Python y Cargo permiten ejecutar por separado los tests de compresión/configuración y del lanzador.
 
 ```bash
-npm run kit:build
-npm run test:kit:app
+npm run build
+npm test
 npm run image:build
 npm run image:test
 ```
@@ -91,11 +84,9 @@ La aceptación del bundle utiliza un host de archivos y una instancia Better Aut
 
 `image:test` construye primero la fixture HTTP/TLS y también ejecuta Chrome contra la imagen real y una API Better Auth aislada. Esta última usa un contexto de build temporal separado; no añade código de backend a la imagen de aplicación. Puede descargar su imagen de test y dependencias la primera vez.
 
-### Resultado local verificado
+### Recibos de verificación
 
-`auth-static:local` se construyó y ejecutó con ID `sha256:7e199a067b1b0d64d548d44f79d08462e63d731f4231402974afc4b3dcbc6e6f`: **13,858,584 bytes (~13.2 MiB)**. Pasaron **189 pruebas de frontend/legacy**, **9 de imagen**, **9 de Python** y **5 de Rust**; el diagnóstico separado pasó otras 12. El recorrido de imagen utiliza cookies y magic-links reales de prueba, y mide 108 estados de contraste sobre sus assets. No son cifras de capacidad ni cold start.
-
-Las pruebas de diagnóstico HTTP requieren su servidor y `KIT_SMOKE_URL`; no deben mezclarse con las pruebas unitarias sin ese contexto. Los recibos de ejecución y las limitaciones pendientes se registran en el [plan de implementación](superpowers/plans/2026-10-30-static-sveltekit-nginx.md).
+Los resultados posteriores a la reorganización se registran en el [plan de cierre del frontend](superpowers/plans/2026-11-08-frontend-migration-cleanup.md). El recorrido de imagen utiliza cookies y magic-links reales de prueba, y mide 108 estados de contraste sobre sus assets. Los recibos anteriores a esta limpieza no validan los archivos reorganizados; tampoco son cifras de capacidad ni cold start.
 
 ## Si algo falla
 
@@ -106,6 +97,6 @@ Las pruebas de diagnóstico HTTP requieren su servidor y `KIT_SMOKE_URL`; no deb
 | Magic-link o proveedor rechaza el callback | Origen público y trusted origins del backend; aplicación y destino registrados. |
 | Inicio de sesión no persiste | Host/dominio, `Secure`/SameSite y ruta de las cookies; usar el mismo origen público para acceder y volver del callback. |
 | API recibe otro método o una ruta recortada | No añadir una redirección del navegador ni eliminar `/api` en un proxy adicional. |
-| Se ve una preview desconectada | Se utilizó el modo diagnóstico. Construir la aplicación con `npm run kit:build`. |
+| Se ve una preview desconectada | Se está sirviendo un artefacto antiguo. Reconstruir la aplicación con `npm run build`. |
 
 Construir y probar localmente no publica imágenes ni despliega Railway. No se han medido capacidad, cold start ni rendimiento por el hecho de que el build termine.
